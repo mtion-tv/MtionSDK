@@ -1,0 +1,28 @@
+{
+    "name": "MTIONStudioSDK_Public_Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:2204c2fff82e4d8478d3ec4199bc30a7",
+        "GUID:478a2357cc57436488a56e564b08d223",
+        "GUID:69448af7b92c7f342b298e06a37122aa",
+        "GUID:1a0324566af4ed544918d6837a1f4e11",
+        "GUID:18d18f811ba286c49814567a3cfba688",
+        "GUID:6f5cb51ce6e5293468b714933a38a33a",
+        "GUID:b46af7ef1acfef34ebc90ce2083b8ede",
+        "GUID:2419aa43e16a69e4daebf172e841a3f6"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "YamlDotNet.dll",
+        "Newtonsoft.Json.dll"
+    ],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

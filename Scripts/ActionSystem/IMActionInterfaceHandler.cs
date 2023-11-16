@@ -1,0 +1,63 @@
+using System;
+using System.Collections.Generic;
+
+
+namespace mtion.room.sdk.action
+{
+    // Input Data
+    [Serializable]
+    public class ActionEntryPointData
+    {
+        public string Guid;
+        public List<object> Parameters = new List<object>();
+    }
+
+    [Serializable]
+    public class ActionEventData
+    {
+        public List<ActionEntryPointData> Components = new List<ActionEntryPointData>();
+        public ActionMetadata Metadata = null;
+        public Action<bool> OnComplete = null;
+    }
+
+    // Definition Interface Data
+    [Serializable]
+    public sealed class ActionEntryPointInfo
+    {
+        public string Guid;
+        public List<ActionEntryParameterInfo> ParameterDefinitions = new List<ActionEntryParameterInfo>();
+    }
+
+    [Serializable]
+    public sealed class ActionExitPointInfo
+    {
+        public string Guid;
+        public string Name;
+        public string Description;
+    }
+
+    [Serializable]
+    public sealed class ActionExitParameterInfo
+    {
+        public string Guid;
+        public string Name;
+        public string ParameterType;
+    }
+
+    [Serializable]
+    public sealed class ActionInterfaceDescriptor
+    {
+        public string Guid;
+        public string ActionName;
+        public string ActionDescription;
+        public List<ActionEntryPointInfo> ValidEntryPoints = new List<ActionEntryPointInfo>();
+        public List<ActionExitPointInfo> ValidExitPoints = new List<ActionExitPointInfo>();
+        public List<ActionExitParameterInfo> ValidExitParameters = new List<ActionExitParameterInfo>();
+    }
+
+    public interface IMActionInterfaceHandler
+    {
+        public void Invoke(ActionEventData actionData);
+        public ActionInterfaceDescriptor GetInterfaceDescriptor();
+    }
+}
