@@ -1,7 +1,7 @@
 {
     "name": "com.mtion.sdk",
     "description": "Tools to create assets and clubhouses for mtion studio.",
-    "version": "0.8.11",
+    "version": "0.10.1",
     "unity": "2021.3",
     "displayName": "Mtion SDK",
     "dependencies": {
@@ -12,17 +12,37 @@
         "com.unity.modules.imageconversion": "1.0.0",
         "com.unity.nuget.newtonsoft-json": "3.2.1"
     },
+    "samples": [
+        {
+            "displayName": "Particle system (Action)",
+            "description": "Simple example showing you how to export a particle system",
+            "path": "Examples~/ParticleSystemExample"
+        },
+        {
+            "displayName": "UnityEvents Export (Action)",
+            "description": "Simple example showing you how to using UnityEvents with the Action system",
+            "path": "Examples~/UnityEventExample"
+        },
+        {
+            "displayName": "Gaming Room (Asset)",
+            "description": "A room and environment example. Use this to create your own room space",
+            "path": "Examples~/RoomExample"
+        }
+    ],
     "hideInEditor": false,
     "license": "Proprietary",
     "author": {
         "name": "mtion interactive inc.",
-        "email": "hello@mtion.tv",
-        "url": "https://mtion.tv"
+        "email": "hello@mtion.xyz",
+        "url": "https://mtion.xyz"
     },
     "keywords": [
         "mtion",
         "sdk",
         "gaming",
+        "modding",
+        "minigames",
+        "creation",
         "live streaming"
     ]
 }

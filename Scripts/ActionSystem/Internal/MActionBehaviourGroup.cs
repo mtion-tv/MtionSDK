@@ -1,17 +1,24 @@
-using mtion.room.sdk.action;
 using mtion.room.sdk.compiled;
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
-
 
 namespace mtion.room.sdk.action
 {
+    [ExecuteInEditMode]
     public class MActionBehaviourGroup : MonoBehaviour
     {
         public List<MActionBehaviour> MActionMap = new List<MActionBehaviour>();
+
+        public int Version = 1;
+
+        private void Awake()
+        {
+#if MTION_ADVANCED_ACTION_UI
+            gameObject.hideFlags = HideFlags.None;
+#else
+            gameObject.hideFlags = HideFlags.HideInHierarchy;
+#endif
+        }
 
         public MActionBehaviour CreateAction()
         {
@@ -47,8 +54,6 @@ namespace mtion.room.sdk.action
         {
             return MActionMap;
         }
-
-
 
         public void DestroyAll()
         {

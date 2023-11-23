@@ -1,9 +1,12 @@
 using mtion.room.sdk.compiled;
+using mtion.room.sdk.utility;
 using Newtonsoft.Json;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
+using UnityEditor.PackageManager;
+using UnityEditor.PackageManager.Requests;
 using UnityEngine;
 
 namespace mtion.room.sdk
@@ -29,6 +32,7 @@ namespace mtion.room.sdk
         private static bool _showPropPanel;
         private static bool _showActionPanel;
 
+        private static ListRequest _packageListRequest;
         private static string _sdkVersion;
         private static Texture2D _logoIcon;
         private static Texture2D _warningIcon;
@@ -156,36 +160,45 @@ namespace mtion.room.sdk
 
         private void LoadAllIcons()
         {
-            _logoIcon = LoadIcon("mtion-logo.png");
-            _warningIcon = LoadIcon("warning-icon.png");
-            _errorIcon = LoadIcon("error-icon.png");
-        }
-
-        private static Texture2D LoadIcon(string fileName)
-        {
-            var output = EditorGUIUtility.Load($"_mtion/Icons/{fileName}") as Texture2D;
-            if (output == null)
-            {
-                string path = Path.Combine(Application.dataPath, "Editor Default Resources/_mtion/Icons");
-
-                if (!Directory.Exists(path))
-                {
-                    Directory.CreateDirectory(path);
-                }
-                if (AssetDatabase.CopyAsset("Packages/" + "com.mtion.studio-sdk" + "/Editor Default Resources/_mtion/Icons/warning-icon.png", path + $"/{fileName}"))
-                {
-                    output = EditorGUIUtility.Load($"_mtion/Icons/{fileName}") as Texture2D;
-                }
-            }
-
-            return output;
+            _logoIcon = TextureLoader.LoadSDKTexture("mtion-logo.png");
+            _warningIcon = TextureLoader.LoadSDKTexture("warning-icon.png");
+            _errorIcon = TextureLoader.LoadSDKTexture("error-icon.png");
         }
 
         private static void GetSDKVersion()
         {
-            TextAsset packageInfoFile = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/_mtion/MTIONStudioSDK/Public/package.json");
-            var manifest = JsonConvert.DeserializeObject<Dictionary<string, object>>(packageInfoFile.text);
-            _sdkVersion = (string)manifest["version"];
+            var packageInfoFile = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/LocalPackages/MTIONStudioSDK/package.json");
+            if (packageInfoFile != null)
+            {
+                var manifest = JsonConvert.DeserializeObject<Dictionary<string, object>>(packageInfoFile.text);
+                _sdkVersion = (string)manifest["version"];
+            }
+            else
+            {
+                _packageListRequest = Client.List();
+                EditorApplication.update += GetSDKVersionCallback;
+            }
+        }
+
+        private static void GetSDKVersionCallback()
+        {
+            if (!_packageListRequest.IsCompleted)
+            {
+                return;
+            }
+
+            if (_packageListRequest.Status == StatusCode.Success)
+            {
+                foreach (var package in _packageListRequest.Result)
+                {
+                    if (package.name.Equals("com.mtion.sdk"))
+                    {
+                        _sdkVersion = package.version;
+                    }
+                }
+            }
+
+            EditorApplication.update -= GetSDKVersionCallback;
         }
 
         private void DrawWindowHeader()
@@ -236,12 +249,12 @@ namespace mtion.room.sdk
                     _selectedTab = Tabs.ACTIONS;
                     MTIONSDKToolsActionTab.Refresh();
                 }
-                else if (GUILayout.Button("Optimization", _selectedTab == Tabs.OPTIMIZATION
-                    ? _toolbarButtonSelectedStyle
-                    : _toolbarButtonStyle))
-                {
-                    _selectedTab = Tabs.OPTIMIZATION;
-                }
+                //else if (GUILayout.Button("Optimization", _selectedTab == Tabs.OPTIMIZATION
+                //    ? _toolbarButtonSelectedStyle
+                //    : _toolbarButtonStyle))
+                //{
+                //    _selectedTab = Tabs.OPTIMIZATION;
+                //}
                 else if (GUILayout.Button("Help", _selectedTab == Tabs.HELP
                     ? _toolbarButtonSelectedStyle
                     : _toolbarButtonStyle))
@@ -286,7 +299,7 @@ namespace mtion.room.sdk
             else
             {
                 _showPropPanel = descriptorObject.ObjectType == MTIONObjectType.MTIONSDK_ROOM;
-                _showActionPanel = true;
+                _showActionPanel = descriptorObject.ObjectType == MTIONObjectType.MTIONSDK_ASSET;
             }
         }
 
@@ -312,7 +325,7 @@ namespace mtion.room.sdk
             boxStyle.fixedHeight = 75;
 
             GUIStyle labelStyle = new GUIStyle();
-            labelStyle.alignment = TextAnchor.MiddleCenter;
+            labelStyle.alignment = TextAnchor.MiddleLeft;
             labelStyle.normal.textColor = Color.white;
             labelStyle.padding = new RectOffset(3, 3, 3, 3);
             labelStyle.margin = new RectOffset(0, 0, 0, 0);

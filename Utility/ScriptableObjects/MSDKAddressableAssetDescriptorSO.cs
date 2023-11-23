@@ -6,7 +6,6 @@ namespace mtion.room.sdk.compiled
 {
     public class MSDKAddressableAssetDescriptorSO : MSDKSerializableBaseSO
     {
-
         [SerializeField, ReadOnly] public string InternalID;
 
         [SerializeField] public string Name;

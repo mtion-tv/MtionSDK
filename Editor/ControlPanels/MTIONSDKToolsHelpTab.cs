@@ -11,19 +11,19 @@ namespace mtion.room.sdk
             GUILayout.BeginVertical();
 
             GUILayout.Space(10);
-            if (GUILayout.Button("Documentation", MTIONSDKToolsWindow.LargeButtonStyle))
+            if (GUILayout.Button(new GUIContent("Documentation", "Opens link to SDK documentation"), MTIONSDKToolsWindow.LargeButtonStyle))
             {
-                Application.OpenURL("https://mtion.notion.site/Everything-about-mtion-studio-21a73a6693cb4d429cc2160ffdd8890e");
+                Application.OpenURL("https://docs.mtion.xyz/mtion/mtion-sdk");
             }
 
             GUILayout.Space(10);
-            if (GUILayout.Button("Tutorials", MTIONSDKToolsWindow.LargeButtonStyle))
+            if (GUILayout.Button(new GUIContent("Tutorials", "Opens link to mtion studio tutorials"), MTIONSDKToolsWindow.LargeButtonStyle))
             {
-                Application.OpenURL("https://mtion.notion.site/Tutorials-Guides-c72ea8be342240ad9ecbe02491f23693");
+                Application.OpenURL("https://docs.mtion.xyz/mtion/tutorials/video-tutorials");
             }
 
             GUILayout.Space(10);
-            if (GUILayout.Button("Discord", MTIONSDKToolsWindow.LargeButtonStyle))
+            if (GUILayout.Button(new GUIContent("Discord", "Opens link to join our discord server"), MTIONSDKToolsWindow.LargeButtonStyle))
             {
                 Application.OpenURL("https://discord.com/invite/CuRyapecDq");
             }

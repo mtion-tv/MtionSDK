@@ -83,7 +83,7 @@ namespace mtion.room.sdk
             AssetDatabase.DeleteAsset(roomPrefabPath);
 
             // Create Assets
-            PrefabUtility.SaveAsPrefabAsset(assetBase.ObjectReference, roomPrefabPath);
+            PrefabUtility.SaveAsPrefabAsset(assetBase.ObjectReferenceProp, roomPrefabPath);
             AssetDatabase.SaveAssets();
         }
 
@@ -98,7 +98,7 @@ namespace mtion.room.sdk
             var envScenePath = Path.Combine(dir, $"{assetBase.InternalID}.unity").Replace('\\', '/');
             assetBase.AddressableID = envScenePath;
 
-            var scenePath = assetBase.ObjectReference.scene.path;
+            var scenePath = assetBase.ObjectReferenceProp.scene.path;
             AssetDatabase.DeleteAsset(envScenePath);
 
             if (!AssetDatabase.CopyAsset(scenePath, envScenePath))
@@ -415,26 +415,26 @@ namespace mtion.room.sdk
             var exportOptions = new ExportOptions { TexturePathRetriever = GLTFExportMenu.RetrieveTexturePath };
 
             // Cache current position, rotation, and scale
-            var originalPosition = assetBase.ObjectReference.transform.position;
-            var originalRotation = assetBase.ObjectReference.transform.rotation;
-            var originalScale = assetBase.ObjectReference.transform.localScale;
+            var originalPosition = assetBase.ObjectReferenceProp.transform.position;
+            var originalRotation = assetBase.ObjectReferenceProp.transform.rotation;
+            var originalScale = assetBase.ObjectReferenceProp.transform.localScale;
 
             // Set position, rotation, and scale to 0,0,0, 0,0,0, 1,1,1
-            assetBase.ObjectReference.transform.position = Vector3.zero;
-            assetBase.ObjectReference.transform.rotation = Quaternion.identity;
-            assetBase.ObjectReference.transform.localScale = Vector3.one;
+            assetBase.ObjectReferenceProp.transform.position = Vector3.zero;
+            assetBase.ObjectReferenceProp.transform.rotation = Quaternion.identity;
+            assetBase.ObjectReferenceProp.transform.localScale = Vector3.one;
 
             // Export object
-            var transforms = new Transform[] { assetBase.ObjectReference.transform };
+            var transforms = new Transform[] { assetBase.ObjectReferenceProp.transform };
             var exporter = new GLTFSceneExporter(transforms, exportOptions);
 
             GLTFSceneExporter.SaveFolderPath = localWebGLDirectory;
             exporter.SaveGLB(localWebGLDirectory, fileName);
 
             // Reset position
-            assetBase.ObjectReference.transform.position = originalPosition;
-            assetBase.ObjectReference.transform.rotation = originalRotation;
-            assetBase.ObjectReference.transform.localScale = originalScale;
+            assetBase.ObjectReferenceProp.transform.position = originalPosition;
+            assetBase.ObjectReferenceProp.transform.rotation = originalRotation;
+            assetBase.ObjectReferenceProp.transform.localScale = originalScale;
 
             onExportComplete?.Invoke();
         }

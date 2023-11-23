@@ -32,7 +32,7 @@ namespace mtion.room.sdk
         public static ReorderableList _assetComponentRList = null;
         public static List<MVirtualAssetTracker> _assetComponents = new List<MVirtualAssetTracker>();
 
-        private static MTIONSDKDescriptorSceneBase _roomSDKDescriptorObject = null;
+        private static MTIONSDKRoom _roomSDKDescriptorObject = null;
         private static Vector2 _scrollPos;
 
         private static bool _openCameraFoldout;
@@ -40,14 +40,12 @@ namespace mtion.room.sdk
         private static bool _openLightsFoldout;
         private static bool _openAssetsFoldout;
 
-
-
         public static void Initialize()
         {
             // Find Room Descriptor Object
             if (_roomSDKDescriptorObject == null)
             {
-                _roomSDKDescriptorObject = GameObject.FindObjectOfType<MTIONSDKDescriptorSceneBase>();
+                _roomSDKDescriptorObject = GameObject.FindObjectOfType<MTIONSDKRoom>();
             }
 
             // Create reorderable list of camera views
@@ -403,7 +401,7 @@ namespace mtion.room.sdk
             // Find Room Descriptor Object
             if (_roomSDKDescriptorObject == null)
             {
-                _roomSDKDescriptorObject = GameObject.FindObjectOfType<MTIONSDKDescriptorSceneBase>();
+                _roomSDKDescriptorObject = GameObject.FindObjectOfType<MTIONSDKRoom>();
             }
 
             if (_roomSDKDescriptorObject == null ||
@@ -413,16 +411,25 @@ namespace mtion.room.sdk
             }
 
 
-            if (_roomSDKDescriptorObject && _roomSDKDescriptorObject.SDKRoot == null)
+            if (_roomSDKDescriptorObject)
             {
-                _roomSDKDescriptorObject.SDKRoot = GameObject.Find("SDK PROPS");
                 if (_roomSDKDescriptorObject.SDKRoot == null)
                 {
-                    _roomSDKDescriptorObject.SDKRoot = new GameObject("SDK PROPS");
-                    _roomSDKDescriptorObject.SDKRoot.transform.parent = _roomSDKDescriptorObject.transform;
-                    _roomSDKDescriptorObject.SDKRoot.transform.localPosition = Vector3.zero;
-                    _roomSDKDescriptorObject.SDKRoot.transform.localRotation = Quaternion.identity;
-                    _roomSDKDescriptorObject.SDKRoot.transform.localScale = Vector3.one;
+                    _roomSDKDescriptorObject.SDKRoot = GameObject.Find("SDK PROPS");
+                    if (_roomSDKDescriptorObject.SDKRoot == null)
+                    {
+                        _roomSDKDescriptorObject.SDKRoot = new GameObject("SDK PROPS");
+                        _roomSDKDescriptorObject.SDKRoot.transform.localPosition = Vector3.zero;
+                        _roomSDKDescriptorObject.SDKRoot.transform.localRotation = Quaternion.identity;
+                        _roomSDKDescriptorObject.SDKRoot.transform.localScale = Vector3.one;
+                    }
+                }
+
+                if (_roomSDKDescriptorObject.SDKRoot.transform.parent != null)
+                {
+                    _roomSDKDescriptorObject.SDKRoot.transform.parent = null;
+                    int siblingIndex = _roomSDKDescriptorObject.ObjectReferenceProp.transform.GetSiblingIndex();
+                    _roomSDKDescriptorObject.SDKRoot.transform.SetSiblingIndex(siblingIndex + 1);
                 }
             }
 

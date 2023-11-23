@@ -11,6 +11,7 @@ using UnityEngine.SceneManagement;
 using Asyncoroutine;
 using mtion.room.sdk.customproperties;
 using System.Linq;
+using mtion.room.sdk.action;
 
 namespace mtion.room.sdk
 {
@@ -38,14 +39,16 @@ namespace mtion.room.sdk
         {
             allCustomPropertiesContainers.Clear();
 
-            var _sceneDescriptorObject = GameObject.FindObjectOfType<MTIONSDKDescriptorSceneBase>();
+            var _sceneDescriptorObject = GameObject.FindObjectOfType<MTIONSDKRoom>();
             if (_sceneDescriptorObject == null) 
             {
                 return;
             }
 
             SceneVerificationUtil.VerifySceneIntegrity(_sceneDescriptorObject);
-            ComponentVerificationUtil.VerifyAllComponentsIntegrity(_sceneDescriptorObject, MTIONObjectType.MTIONSDK_ASSET);
+            ComponentVerificationUtil.VerifyAllComponentsIntegrity(_sceneDescriptorObject,
+                    MTIONObjectType.MTIONSDK_ASSET);
+
             var propContainers = GameObject.FindObjectsOfType<CustomPropertiesContainer>();
             foreach (var propContainer in propContainers)
             {
@@ -83,35 +86,115 @@ namespace mtion.room.sdk
             }
             else
             {
+                GUIStyle headerLabelStyle = new GUIStyle();
+                headerLabelStyle.alignment = TextAnchor.MiddleLeft;
+                headerLabelStyle.fontStyle = FontStyle.Bold;
+                headerLabelStyle.normal.textColor = Color.white;
+                headerLabelStyle.fontSize = 16;
+
+                var textFieldStyle = new GUIStyle(GUI.skin.textField);
+                textFieldStyle.normal.background = MTIONSDKToolsWindow.CreateTextureForColor(1, 1, new Color(0.317f, 0.317f, 0.317f));
+                textFieldStyle.normal.textColor = Color.white;
+                textFieldStyle.fontSize = 14;
+                textFieldStyle.fixedWidth = 450;
+                textFieldStyle.fixedHeight = 22;
+                
+                var sizelessTextFieldStyle = new GUIStyle(GUI.skin.textField);
+                sizelessTextFieldStyle.normal.background = MTIONSDKToolsWindow.CreateTextureForColor(1, 1, new Color(0.317f, 0.317f, 0.317f));
+                sizelessTextFieldStyle.normal.textColor = Color.white;
+
+                var textFieldLabelStyle = new GUIStyle();
+                textFieldLabelStyle.fontSize = 14;
+                textFieldLabelStyle.normal.textColor = Color.white;
+                textFieldLabelStyle.fixedWidth = 150;
+                textFieldLabelStyle.fixedHeight = 22;
+                textFieldLabelStyle.alignment = TextAnchor.MiddleLeft;
+                textFieldLabelStyle.margin = new RectOffset(2, 0, 0, 0);
+
+                var popupStyle = new GUIStyle(EditorStyles.popup);
+                popupStyle.fixedWidth = 450;
+                popupStyle.fixedHeight = 22;
+                popupStyle.fontSize = 14;
+
+                var toggleStyle = new GUIStyle(GUI.skin.toggle);
+                toggleStyle.normal.textColor = Color.white;
+                toggleStyle.fontSize = 14;
+                toggleStyle.fixedWidth = 22;
+                toggleStyle.fixedHeight = 22;
+                
+                // Settings
+                StartBox();
+                {
+                    GUILayout.Label("Settings", headerLabelStyle);
+                    GUILayout.Space(10);
+
+                    bool changesMade = false;
+                    var descriptorGO = BuildManager.GetSceneDescriptor();
+                    var descriptor = descriptorGO.GetComponent<MTIONSDKDescriptorSceneBase>();
+                    
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label(new GUIContent("Show grid", "Enables grid visualization in the scene"), textFieldLabelStyle);
+                    bool showGrid = GUILayout.Toggle(descriptor.ShowGrid, "", toggleStyle);
+                    if (showGrid != descriptor.ShowGrid)
+                    {
+                        descriptor.ShowGrid = showGrid;
+                        changesMade = true;
+                    }
+                    GUILayout.FlexibleSpace();
+                    GUILayout.EndHorizontal();
+                    GUILayout.Space(10);
+                    
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label(new GUIContent("Grid Size", "Adjusts the size of the grid"), textFieldLabelStyle);
+                    float gridSize = GUILayout.HorizontalSlider(descriptor.GridSize, 2f, 50f, GUILayout.Width(450));
+                    if (gridSize != descriptor.GridSize)
+                    {
+                        descriptor.GridSize = gridSize;
+                        changesMade = true;
+                    }
+                    GUILayout.FlexibleSpace();
+                    GUILayout.EndHorizontal();
+                    GUILayout.Space(10);
+                    
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label(new GUIContent("Scale Reference", "Places an object in the scene that can be used to reference asset size"), textFieldLabelStyle);
+                    SDKScaleReference scaleReference =
+                        (SDKScaleReference)EditorGUILayout.EnumPopup("", descriptor.ScaleReference, popupStyle);
+                    if (scaleReference != descriptor.ScaleReference)
+                    {
+                        descriptor.ScaleReference = scaleReference;
+                        changesMade = true;
+                    }
+                    GUILayout.FlexibleSpace();
+                    GUILayout.EndHorizontal();
+                    GUILayout.Space(10);
+                    
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label(new GUIContent("Reference Position", "Adjusts the location of the reference object"), textFieldLabelStyle);
+
+                    EditorGUIUtility.labelWidth = 10;
+                    float xValue = EditorGUILayout.FloatField("X", descriptor.ScaleReferencePosition.x, sizelessTextFieldStyle, GUILayout.Height(22),
+                        GUILayout.MaxWidth(148));
+                    float yValue = EditorGUILayout.FloatField("Y", descriptor.ScaleReferencePosition.y, sizelessTextFieldStyle, GUILayout.Height(22),
+                        GUILayout.MaxWidth(148));
+                    float zValue = EditorGUILayout.FloatField("Z", descriptor.ScaleReferencePosition.z, sizelessTextFieldStyle, GUILayout.Height(22),
+                        GUILayout.MaxWidth(148));
+                    EditorGUIUtility.labelWidth = 0;
+                    Vector3 scaleReferencePosition = new Vector3(xValue, yValue, zValue);
+                    if (scaleReferencePosition != descriptor.ScaleReferencePosition)
+                    {
+                        descriptor.ScaleReferencePosition = scaleReferencePosition;
+                        changesMade = true;
+                    }
+                    GUILayout.FlexibleSpace();
+                    GUILayout.EndHorizontal();
+                    GUILayout.Space(10);
+                }
+                EndBox();
+                
                 // Options
                 StartBox();
                 {
-                    GUIStyle headerLabelStyle = new GUIStyle();
-                    headerLabelStyle.alignment = TextAnchor.MiddleLeft;
-                    headerLabelStyle.fontStyle = FontStyle.Bold;
-                    headerLabelStyle.normal.textColor = Color.white;
-                    headerLabelStyle.fontSize = 16;
-
-                    var textFieldStyle = new GUIStyle(GUI.skin.textField);
-                    textFieldStyle.normal.background = MTIONSDKToolsWindow.CreateTextureForColor(1, 1, new Color(0.317f, 0.317f, 0.317f));
-                    textFieldStyle.normal.textColor = Color.white;
-                    textFieldStyle.fontSize = 14;
-                    textFieldStyle.fixedWidth = 450;
-                    textFieldStyle.fixedHeight = 22;
-
-                    var textFieldLabelStyle = new GUIStyle();
-                    textFieldLabelStyle.fontSize = 14;
-                    textFieldLabelStyle.normal.textColor = Color.white;
-                    textFieldLabelStyle.fixedWidth = 150;
-                    textFieldLabelStyle.fixedHeight = 22;
-                    textFieldLabelStyle.alignment = TextAnchor.MiddleLeft;
-                    textFieldLabelStyle.margin = new RectOffset(2, 0, 0, 0);
-
-                    var popupStyle = new GUIStyle(EditorStyles.popup);
-                    popupStyle.fixedWidth = 450;
-                    popupStyle.fixedHeight = 22;
-                    popupStyle.fontSize = 14;
-
                     GUILayout.Label("Options", headerLabelStyle);
                     GUILayout.Space(10);
 
@@ -120,7 +203,7 @@ namespace mtion.room.sdk
                     var descriptor = descriptorGO.GetComponent<MTIONSDKDescriptorSceneBase>();
 
                     GUILayout.BeginHorizontal();
-                    GUILayout.Label("Name", textFieldLabelStyle);
+                    GUILayout.Label(new GUIContent("Name", "Name of the asset, used in mtion studio"), textFieldLabelStyle);
                     var name = descriptor.Name;
                     descriptor.Name = GUILayout.TextField(descriptor.Name, textFieldStyle);
                     changesMade |= name != descriptor.Name;
@@ -129,7 +212,7 @@ namespace mtion.room.sdk
                     GUILayout.Space(10);
 
                     GUILayout.BeginHorizontal();
-                    GUILayout.Label("Description", textFieldLabelStyle);
+                    GUILayout.Label(new GUIContent("Description", "Description of the asset, used in mtion studio"), textFieldLabelStyle);
                     var desc = descriptor.Description;
                     descriptor.Description = GUILayout.TextField(descriptor.Description, textFieldStyle);
                     changesMade |= desc != descriptor.Description;
@@ -138,7 +221,7 @@ namespace mtion.room.sdk
                     GUILayout.Space(10);
 
                     GUILayout.BeginHorizontal();
-                    GUILayout.Label("Version", textFieldLabelStyle);
+                    GUILayout.Label(new GUIContent("Version", "Version of the asset, used when upgrading assets"), textFieldLabelStyle);
                     var version = descriptor.Version;
                     descriptor.Version = EditorGUILayout.FloatField(descriptor.Version, textFieldStyle);
                     changesMade |= version != descriptor.Version;
@@ -147,7 +230,7 @@ namespace mtion.room.sdk
                     GUILayout.Space(10);
 
                     GUILayout.BeginHorizontal();
-                    GUILayout.Label("Export Location", textFieldLabelStyle);
+                    GUILayout.Label(new GUIContent("Export Location", "PersistentStorage: stores assets to the AppData folder on C drive. \nStreamingAssets: stores built asset to the StreamingAssets folder in Unity project"), textFieldLabelStyle);
                     var locOpts = descriptor.LocationOption;
                     descriptor.LocationOption = (ExportLocationOptions)EditorGUILayout.Popup(
                         (int)descriptor.LocationOption, Enum.GetNames(typeof(ExportLocationOptions)), popupStyle);
@@ -155,21 +238,39 @@ namespace mtion.room.sdk
                     GUILayout.FlexibleSpace();
                     GUILayout.EndHorizontal();
                     GUILayout.Space(10);
-
-
-
+                    
                     // Environment Scene
                     if (descriptor.ObjectType == MTIONObjectType.MTIONSDK_ROOM)
                     {
                         var roomSDKObject = GameObject.FindObjectOfType<MTIONSDKRoom>();
 
                         GUILayout.BeginHorizontal();
-                        GUILayout.Label("Environment ID", textFieldLabelStyle);
+                        GUILayout.Label(new GUIContent("Environment ID", "Place the environmet ID here to link an environment to the current Room asset."), textFieldLabelStyle);
                         var defaultEnv = roomSDKObject.EnvironmentInternalID;
                         roomSDKObject.EnvironmentInternalID = EditorGUILayout.TextField(roomSDKObject.EnvironmentInternalID, textFieldStyle);
                         changesMade |= defaultEnv != roomSDKObject.EnvironmentInternalID;
                         GUILayout.FlexibleSpace();
                         GUILayout.EndHorizontal();
+                    }
+                    else if (descriptor.ObjectType == MTIONObjectType.MTIONSDK_ENVIRONMENT)
+                    {
+                        var environmentSDKObject = GameObject.FindObjectOfType<MTIONSDKEnvironment>();
+
+                        GUILayout.BeginHorizontal();
+                        GUILayout.Label(new GUIContent("Environment ID", "Use this ID to link a room to this scene environment"), textFieldLabelStyle);
+                        EditorGUILayout.TextField(environmentSDKObject.InternalID, sizelessTextFieldStyle,
+                            GUILayout.Height(22), GUILayout.Width(450 - 22));
+
+                        Texture duplicateIcon = Resources.Load<Texture>("Icons/duplicate-icon");
+                        
+                        if (GUILayout.Button(duplicateIcon, MTIONSDKToolsWindow.SmallButtonStyle, GUILayout.Width(22)))
+                        {
+                            EditorGUIUtility.systemCopyBuffer = environmentSDKObject.InternalID;
+                            Debug.Log($"\"{environmentSDKObject.InternalID}\" copied to clipboard");
+                        }
+                        GUILayout.EndHorizontal();
+                        
+                        GUILayout.Space(5f);
                     }
 
                     if (changesMade)
@@ -190,7 +291,7 @@ namespace mtion.room.sdk
                 // Buttons to create and add mtion sdk components
                 GUILayout.BeginHorizontal();
                 {
-                    var buildScene = GUILayout.Button("Build Scene", MTIONSDKToolsWindow.LargeButtonStyle);
+                    var buildScene = GUILayout.Button(new GUIContent("Build Scene", "Processes and bundles scene into package for mtion studio"), MTIONSDKToolsWindow.LargeButtonStyle);
                     if (buildScene && _buildErrorsExist)
                     {
                         EditorUtility.DisplayDialog("Build errors found", "Please fix all errors indicated in the \"Build\" tab before building.", "Close");
@@ -347,21 +448,19 @@ namespace mtion.room.sdk
                 // Buttons to create and add mtion sdk components
                 GUILayout.BeginHorizontal();
                 {
-                    if (GUILayout.Button("Create Room Scene", MTIONSDKToolsWindow.LargeButtonStyle))
+                    if (GUILayout.Button(new GUIContent("Create Room Scene", "Initializes current scene to build out a mtion room"), MTIONSDKToolsWindow.LargeButtonStyle))
                     {
                         CreateRoomScene();
                     }
 
-                    if (GUILayout.Button("Create Environment Scene", MTIONSDKToolsWindow.LargeButtonStyle))
+                    if (GUILayout.Button(new GUIContent("Create Environment Scene", "Initializes current scene build out a mtion environment"), MTIONSDKToolsWindow.LargeButtonStyle))
                     {
                         CreateEnvironmentScene();
                     }
-
-
                 }
                 GUILayout.EndHorizontal();
 
-                if (GUILayout.Button("Create Asset Scene", MTIONSDKToolsWindow.LargeButtonStyle))
+                if (GUILayout.Button(new GUIContent("Create Asset Scene", "Initializes current scene to build out a mtion asset"), MTIONSDKToolsWindow.LargeButtonStyle))
                 {
                     CreateAssetScene();
                 }
@@ -405,13 +504,13 @@ namespace mtion.room.sdk
 
                 EditorGUILayout.BeginHorizontal(tableHeaderStyle);
 
-                EditorGUILayout.LabelField("Property Name", entryLabelStyle, GUILayout.MaxWidth(largeLabelMaxWidth));
-                EditorGUILayout.LabelField("Type", entryLabelStyle, GUILayout.MinWidth(smallLabelMinWidth));
-                EditorGUILayout.LabelField("Asset", entryLabelStyle, GUILayout.MinWidth(smallLabelMinWidth));
-                EditorGUILayout.LabelField("Component", entryLabelStyle, GUILayout.MaxWidth(largeLabelMaxWidth));
-                EditorGUILayout.LabelField("Default Value", entryLabelStyle, GUILayout.MaxWidth(largeLabelMaxWidth));
-                EditorGUILayout.LabelField("Min Value", entryLabelStyle, GUILayout.MinWidth(smallLabelMinWidth));
-                EditorGUILayout.LabelField("Max Value", entryLabelStyle, GUILayout.MinWidth(smallLabelMinWidth));
+                EditorGUILayout.LabelField(new GUIContent("Property Name"), entryLabelStyle, GUILayout.MaxWidth(largeLabelMaxWidth));
+                EditorGUILayout.LabelField(new GUIContent("Type"), entryLabelStyle, GUILayout.MinWidth(smallLabelMinWidth));
+                EditorGUILayout.LabelField(new GUIContent("Asset"), entryLabelStyle, GUILayout.MinWidth(smallLabelMinWidth));
+                EditorGUILayout.LabelField(new GUIContent("Component"), entryLabelStyle, GUILayout.MaxWidth(largeLabelMaxWidth));
+                EditorGUILayout.LabelField(new GUIContent("Default Value"), entryLabelStyle, GUILayout.MaxWidth(largeLabelMaxWidth));
+                EditorGUILayout.LabelField(new GUIContent("Min Value"), entryLabelStyle, GUILayout.MinWidth(smallLabelMinWidth));
+                EditorGUILayout.LabelField(new GUIContent("Max Value"), entryLabelStyle, GUILayout.MinWidth(smallLabelMinWidth));
                 GUILayout.FlexibleSpace();
 
                 EditorGUILayout.EndHorizontal();
@@ -521,7 +620,7 @@ namespace mtion.room.sdk
 
         private static void GenerateMTIONScene(MTIONSDKDescriptorSceneBase descriptor, Scene scene)
         {
-            string descriptorObjectType = SDKEditorUtil.ConvertObjectTypeToString(descriptor.ObjectType);
+            string descriptorObjectType = MTIONSDKAssetBase.ConvertObjectTypeToString(descriptor.ObjectType);
             string scenePath = scene.path;
 
             // Get Main camera
@@ -546,27 +645,20 @@ namespace mtion.room.sdk
             mainCamera.transform.rotation = new Quaternion(-0.0752960071f, -0.872711599f, 0.142591402f, -0.460839152f);
             mainCamera.transform.parent = descriptor.gameObject.transform;
 
-
-            // Create plane for intial starting room
-            GameObject roomVizGO = new GameObject($"{descriptorObjectType}BaseVisualization");
-            roomVizGO.transform.position = Vector3.zero;
-            roomVizGO.transform.rotation = Quaternion.identity;
-            roomVizGO.hideFlags = HideFlags.NotEditable;
-            roomVizGO.transform.parent = descriptor.gameObject.transform;
-
-            GameObject planeGO = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            planeGO.transform.position = Vector3.zero;
-            planeGO.transform.rotation = Quaternion.Euler(new Vector3(90, 0, 0));
-            planeGO.transform.localScale = Vector3.one * 6;
-            planeGO.GetComponent<Renderer>().material = (Material)Resources.Load("Materials/GridMat", typeof(Material));
-            planeGO.hideFlags = HideFlags.NotEditable;
-            planeGO.transform.parent = roomVizGO.transform;
-
             // Create main room prefab
-            GameObject roomGO = new GameObject($"MTION {descriptorObjectType.ToUpper()}");
-            roomGO.transform.position = Vector3.zero;
-            roomGO.transform.rotation = Quaternion.identity;
-            descriptor.ObjectReference = roomGO;
+            var forceObjectReferenceCration = descriptor.ObjectReferenceProp;
+
+            if (descriptor.ObjectType == MTIONObjectType.MTIONSDK_ROOM)
+            {
+                var roomDescriptor = descriptor as MTIONSDKRoom;
+                if (roomDescriptor.SDKRoot == null) 
+                {
+                    roomDescriptor.SDKRoot = new GameObject("SDK PROPS");
+                    roomDescriptor.SDKRoot.transform.localPosition = Vector3.zero;
+                    roomDescriptor.SDKRoot.transform.localRotation = Quaternion.identity;
+                    roomDescriptor.SDKRoot.transform.localScale = Vector3.one;
+                }
+            }
         }
 
         /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -580,11 +672,13 @@ namespace mtion.room.sdk
             _buildErrorsExist = false;
             _buildErrorsExist |= GenerateIncorrectNumCamerasError();
             _buildErrorsExist |= GenerateMissingColliderOnRigidbodyError();
+            GenerateInvalidUnityEventActionWarnings();
             GenerateDuplicatePropertyNameWarnings();
             GenerateMissingMetadataWarnings();
             GenerateMissingScriptsWarnings();
             GenerateMissingColliderWarnings();
             GenerateActionEmptyEntryPointWarnings();
+            GenerateActionOnRoomOrEnvironment();
         }
 
         private static bool GenerateIncorrectNumCamerasError()
@@ -628,6 +722,28 @@ namespace mtion.room.sdk
             }
 
             return gameObjectsMissingCollidersWithRb.Count > 0;
+        }
+
+        private static void GenerateInvalidUnityEventActionWarnings()
+        {
+            var invalidUnityEventActions = SceneVerificationUtil.GetGameObjectsWithInvalidUnityEventActions();
+            foreach (var kvp in invalidUnityEventActions)
+            {
+                var warningMessage = $"UnityEventAction on <b>{kvp.Key.name}</b> contains custom listeners. " +
+                    "These listeners will not function once exported to mtion studio.\n";
+                for (var i = 0; i < kvp.Value.Count; ++i)
+                {
+                    warningMessage += $"<b>{kvp.Value[i]}</b>";
+                    if (i != kvp.Value.Count - 1)
+                    {
+                        warningMessage += ", ";
+                    }
+                }
+
+                StartBox();
+                MTIONSDKToolsWindow.DrawWarning(warningMessage);
+                EndBox();
+            }
         }
 
         private static void GenerateDuplicatePropertyNameWarnings()
@@ -713,6 +829,42 @@ namespace mtion.room.sdk
                 StartBox();
                 MTIONSDKToolsWindow.DrawWarning(warningMessage);
                 EndBox();
+            }
+        }
+
+        private static void GenerateActionOnRoomOrEnvironment()
+        {
+            MTIONSDKAssetBase sceneDescriptorObject = GameObject.FindObjectOfType<MTIONSDKRoom>();
+            
+            if (sceneDescriptorObject == null)
+            {
+                sceneDescriptorObject = GameObject.FindObjectOfType<MTIONSDKEnvironment>();
+            }
+            else
+            {
+                IAction[] actions = (sceneDescriptorObject as MTIONSDKRoom).SDKRoot.GetComponentsInChildren<IAction>();
+                foreach (IAction action in actions)
+                {
+                    MVirtualAssetTracker tracker = (action as MonoBehaviour).GetComponentInParent<MVirtualAssetTracker>();
+                    if (tracker != null)
+                    {
+                        StartBox();
+                        MTIONSDKToolsWindow.DrawWarning(
+                            $"Asset <b>{tracker.gameObject.name}</b> contains Action {action.GetType().Name}. Please remove it. Actions are not allowed on objects inside clubhouse templates.");
+                        EndBox();
+                    }
+                }
+            }
+
+            if (sceneDescriptorObject != null)
+            {
+                IAction[] actions = sceneDescriptorObject.ObjectReference.GetComponentsInChildren<IAction>();
+                if (actions.Length > 0)
+                {
+                    StartBox();
+                    MTIONSDKToolsWindow.DrawWarning($"{actions.Length} Action scripts found in the scene. Actions can only be added to assets. Fix this by removing any Action Components from the scene.");
+                    EndBox();
+                }
             }
         }
 

@@ -43,6 +43,7 @@ namespace mtion.room.sdk.action
 
         public string ActionName;
         public string ActionDescription;
+        public bool Active = true;
 
         [HideInInspector]
         public string Guid = SDKUtil.GenerateNewGUID();

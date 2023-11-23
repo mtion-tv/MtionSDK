@@ -6,13 +6,18 @@ using mtion.room.sdk.compiled;
 namespace mtion.room.sdk
 {
     [SelectionBase]
+    [ExecuteInEditMode]
     public class MVirtualAssetTracker : MTIONSDKAssetBase
     {
         [HideInInspector]
         public compiled.AssetParameters AssetParams = new compiled.AssetParameters();
 
-
 #if UNITY_EDITOR
+        protected override void Awake()
+        {
+            MigrateFromDescriptorSO();
+        }
+        
         private void OnDrawGizmos()
         {
             Gizmos.color = Color.blue;

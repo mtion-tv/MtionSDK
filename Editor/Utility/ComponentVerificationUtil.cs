@@ -31,19 +31,9 @@ namespace mtion.room.sdk.compiled
                     output[asset].Add("Description");
                 }
 
-                if (asset.ObjectReference == null)
+                if (asset.ObjectReferenceProp == null)
                 {
                     output[asset].Add("Object Reference");
-                }
-            }
-
-            // Check all scene objects
-            var sceneObjects = GameObject.FindObjectsOfType<MTIONSDKDescriptorSceneBase>();
-            foreach (var sceneObject in sceneObjects)
-            {
-                if (sceneObject.SDKRoot == null)
-                {
-                    output[sceneObject].Add("SDK Root");
                 }
             }
 
@@ -76,8 +66,8 @@ namespace mtion.room.sdk.compiled
             {
                 if (asset.ObjectType != MTIONObjectType.MTIONSDK_ASSET) continue;
 
-                if (asset.ObjectReference != null && 
-                    asset.ObjectReference.GetComponentInChildren<Collider>() == null) 
+                if (asset.ObjectReferenceProp != null && 
+                    asset.ObjectReferenceProp.GetComponentInChildren<Collider>() == null) 
                 {
                     output.Add(asset);
                 }
@@ -119,7 +109,7 @@ namespace mtion.room.sdk.compiled
             return output;
         }
 
-        public static void VerifyAllComponentsIntegrity(MTIONSDKDescriptorSceneBase roomSDKDescriptorObject,
+        public static void VerifyAllComponentsIntegrity(MTIONSDKRoom roomSDKDescriptorObject,
             MTIONObjectType sdkType)
         {
             VirtualComponentTracker[] components;
@@ -160,7 +150,7 @@ namespace mtion.room.sdk.compiled
             }
         }
 
-        private static void VerifyAllAssetsIntegrity(MTIONSDKDescriptorSceneBase roomSDKDescriptorObject)
+        private static void VerifyAllAssetsIntegrity(MTIONSDKRoom roomSDKDescriptorObject)
         {
             var virtualAssetsPass1 = GameObject.FindObjectsOfType<MVirtualAssetTracker>();
             for (int i = 0; i < virtualAssetsPass1.Length; ++i)
@@ -186,8 +176,7 @@ namespace mtion.room.sdk.compiled
             }
         }
 
-        private static void WrapAsset(MVirtualAssetTracker asset,
-            MTIONSDKDescriptorSceneBase roomSDKDescriptorObject)
+        private static void WrapAsset(MVirtualAssetTracker asset, MTIONSDKRoom roomSDKDescriptorObject)
         {
             // Ensure that asset is wrapped
             var componentCount = asset.GetComponents<MonoBehaviour>().Length;
@@ -261,19 +250,19 @@ namespace mtion.room.sdk.compiled
         public static void CollectAssetCustomProperties(MTIONSDKAssetBase asset)
         {
             if (asset == null ||
-                asset.ObjectReference == null)
+                asset.ObjectReferenceProp == null)
             {
                 return;
             }
 
-            var customPropsContainer = asset.ObjectReference.GetComponent<CustomPropertiesContainer>();
+            var customPropsContainer = asset.ObjectReferenceProp.GetComponent<CustomPropertiesContainer>();
             if (customPropsContainer == null)
             {
-                customPropsContainer = asset.ObjectReference.AddComponent<CustomPropertiesContainer>();
+                customPropsContainer = asset.ObjectReferenceProp.AddComponent<CustomPropertiesContainer>();
             }
             customPropsContainer.ClearProperties();
 
-            var components = asset.ObjectReference.GetComponentsInChildren<Component>();
+            var components = asset.ObjectReferenceProp.GetComponentsInChildren<Component>();
             foreach (var component in components)
             {
                 if (component == null)
@@ -364,7 +353,7 @@ namespace mtion.room.sdk.compiled
             Transform transform)
         {
             var output = new List<int>();
-            while (transform != assetBase.ObjectReference.transform)
+            while (transform != assetBase.ObjectReferenceProp.transform)
             {
                 output.Insert(0, transform.GetSiblingIndex());
                 transform = transform.parent;

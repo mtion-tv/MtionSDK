@@ -57,7 +57,7 @@ namespace mtion.room.sdk
             }
             else
             {
-                TextAsset packageInfoFile = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/_mtion/MTIONStudioSDK/Public/package.json");
+                TextAsset packageInfoFile = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/LocalPackages/MTIONStudioSDK/package.json");
                 MyPackageManifest manifest = JsonConvert.DeserializeObject<MyPackageManifest>(packageInfoFile.text);
                 version = manifest.version;
             }
@@ -160,7 +160,7 @@ namespace mtion.room.sdk
             }
             else
             {
-                TextAsset packageInfoFile = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/_mtion/MTIONStudioSDK/Public/package.json");
+                TextAsset packageInfoFile = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/LocalPackages/MTIONStudioSDK/package.json");
                 MyPackageManifest manifest = JsonConvert.DeserializeObject<MyPackageManifest>(packageInfoFile.text);
                 version = manifest.version;
             }
@@ -198,7 +198,7 @@ namespace mtion.room.sdk
             }
 
             var actionDataGroup = new List<ActionData>();
-            var actionBehaviourGroup = descriptor.ObjectReference.GetComponentInChildren<MActionBehaviourGroup>(true);
+            var actionBehaviourGroup = descriptor.ObjectReferenceProp.GetComponentInChildren<MActionBehaviourGroup>(true);
             if (actionBehaviourGroup != null)
             {
                 foreach (var actionBehaviour in actionBehaviourGroup.MActionMap)

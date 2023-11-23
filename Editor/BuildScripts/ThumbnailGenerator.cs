@@ -24,13 +24,16 @@ namespace mtion.room.sdk
 
         public static void TakeSnapshotOfAssetInCurrentScene(Camera camera, string basePersistentDirectory)
         {
+            camera.clearFlags = CameraClearFlags.SolidColor;
+            camera.backgroundColor = Color.clear;
+
             TakeSnapshot(camera, basePersistentDirectory);
         }
 
         public static void TakeSnapShotOfAssetInIsolatedScene(MTIONSDKAssetBase asset, string basePersistentDirectory)
         {
             //Make a temporary prefab using the asset in order to instantiate it in the other scene
-            PrefabUtility.SaveAsPrefabAsset(asset.ObjectReference, ThumbnailCreationTempPrefabPath);
+            PrefabUtility.SaveAsPrefabAsset(asset.ObjectReferenceProp, ThumbnailCreationTempPrefabPath);
             GameObject assetObject = PrefabUtility.LoadPrefabContents(ThumbnailCreationTempPrefabPath);
 
             //Open the new scene and keep a reference to the previous one

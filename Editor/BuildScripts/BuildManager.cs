@@ -163,7 +163,7 @@ namespace mtion.room.sdk
             }
 
             var sceneObjectDescriptor = sdkDescriptor.GetComponent<MTIONSDKDescriptorSceneBase>();
-            var roomObject = sceneObjectDescriptor.ObjectReference;
+            var roomObject = sceneObjectDescriptor.ObjectReferenceProp;
 
             // Export room and generate Prefab and glb
             if (roomObject.transform.position == Vector3.zero &&

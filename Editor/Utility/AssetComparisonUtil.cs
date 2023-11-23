@@ -64,7 +64,7 @@ namespace mtion.room.sdk.compiled
 
         public static bool AssetsAreDuplicates(MTIONSDKAssetBase asset1, MTIONSDKAssetBase asset2)
         {
-            return CheckGameObjectsIdentical(asset1.ObjectReference, asset2.ObjectReference);
+            return CheckGameObjectsIdentical(asset1.ObjectReferenceProp, asset2.ObjectReferenceProp);
         }
 
         private static bool CheckGameObjectsIdentical(GameObject obj1, GameObject obj2)
