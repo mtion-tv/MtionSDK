@@ -1,12 +1,11 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
 
 namespace mtion.room.sdk.compiled
 {
-    public class MTIONSDKRoom : MTIONSDKDescriptorSceneBase
+    [ExecuteInEditMode]
+    public sealed class MTIONSDKRoom : MTIONSDKDescriptorSceneBase
     {
         [Obsolete]
         [FormerlySerializedAs("defaultEnvironment")]
@@ -15,6 +14,9 @@ namespace mtion.room.sdk.compiled
         private MSDKAddressableAssetDescriptorSO _defaultEnvironmentOLD;
 
         public string EnvironmentInternalID;
+        
+        [SerializeField, HideInInspector] 
+        public GameObject SDKRoot;
 
         public override void MigrateFromDescriptorSO()
         {

@@ -22,19 +22,8 @@ namespace mtion.room.sdk
         }
 #endif
         
-        ////////////////////////////////////////////////////////////////////////////////////////
-        // SDK ---> JSON
-        ////////////////////////////////////////////////////////////////////////////////////////
 
 
-        /// <summary>
-        /// Convert all SDK Components to JSON String
-        /// </summary>
-        /// <param name="descriptor"></param>
-        /// <param name="userAuth"></param>
-        /// <param name="cameras"></param>
-        /// <param name="displays"></param>
-        /// <returns></returns>
         public static string ConvertSDKSceneToJsonString(
             MTIONSDKDescriptorSceneBase descriptor,
             UserSdkAuthentication userAuth,
@@ -45,7 +34,6 @@ namespace mtion.room.sdk
         {
             SceneConfigurationFile model = new SceneConfigurationFile();
 
-            // Get current version of SDK
             string version = "0.0.0";
 
 #if UNITY_EDITOR
@@ -57,7 +45,7 @@ namespace mtion.room.sdk
             }
             else
             {
-                TextAsset packageInfoFile = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/_mtion/MTIONStudioSDK/Public/package.json");
+                TextAsset packageInfoFile = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/LocalPackages/MTIONStudioSDK/package.json");
                 MyPackageManifest manifest = JsonConvert.DeserializeObject<MyPackageManifest>(packageInfoFile.text);
                 version = manifest.version;
             }
@@ -95,7 +83,6 @@ namespace mtion.room.sdk
                     );
                 }
 
-                // Generate Camera configs
                 var camerasOrdered = cameras.OrderBy(x => x.OrderPrecedence).ToList();
                 foreach (var camera in camerasOrdered)
                 {
@@ -104,7 +91,6 @@ namespace mtion.room.sdk
 
                 model.NumCameras = cameras.Length;
 
-                // Generate Camera configs
                 foreach (var display in displays)
                 {
                     model.Displays.Add(ConvertDisplayToConfigData(display));
@@ -113,7 +99,6 @@ namespace mtion.room.sdk
                 model.NumDisplays = displays.Length;
 
 
-                // Generate Light configs
                 foreach (var light in lights)
                 {
                     model.Lights.Add(ConvertLightToConfigData(light));
@@ -121,7 +106,6 @@ namespace mtion.room.sdk
 
                 model.NumLights = lights.Length;
 
-                // Convert 3D assets configs
                 foreach (var assets in assetTrackers)
                 {
                     model.Assets.Add(ConvertAssetToConfigData(assets));
@@ -148,7 +132,6 @@ namespace mtion.room.sdk
             MTIONSDKAssetBase descriptor,
             UserSdkAuthentication userAuth)
         {
-            // Get current version of SDK
             string version = "0.0.0";
 
 #if UNITY_EDITOR
@@ -160,7 +143,7 @@ namespace mtion.room.sdk
             }
             else
             {
-                TextAsset packageInfoFile = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/_mtion/MTIONStudioSDK/Public/package.json");
+                TextAsset packageInfoFile = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/LocalPackages/MTIONStudioSDK/package.json");
                 MyPackageManifest manifest = JsonConvert.DeserializeObject<MyPackageManifest>(packageInfoFile.text);
                 version = manifest.version;
             }
@@ -187,7 +170,6 @@ namespace mtion.room.sdk
 
             if (descriptor.ObjectType == MTIONObjectType.MTIONSDK_ASSET)
             {
-                // Need to get updated gameobject since scene might have changed
                 var updatedGO = GameObject.FindObjectsOfType<MTIONSDKAssetBase>()
                     .First(x => x.InternalID == descriptor.InternalID);
 
@@ -198,7 +180,7 @@ namespace mtion.room.sdk
             }
 
             var actionDataGroup = new List<ActionData>();
-            var actionBehaviourGroup = descriptor.ObjectReference.GetComponentInChildren<MActionBehaviourGroup>(true);
+            var actionBehaviourGroup = descriptor.ObjectReferenceProp.GetComponentInChildren<MActionBehaviourGroup>(true);
             if (actionBehaviourGroup != null)
             {
                 foreach (var actionBehaviour in actionBehaviourGroup.MActionMap)
@@ -280,7 +262,6 @@ namespace mtion.room.sdk
         {
             AssetParameters assetModel = new AssetParameters();
 
-            // Use internal ID
             assetModel.GUID = asset.InternalID;
 
             assetModel.Position = asset.transform.position;
@@ -310,9 +291,6 @@ namespace mtion.room.sdk
                 });
         }
 
-        ////////////////////////////////////////////////////////////////////////////////////////
-        // JSON ---> SDK
-        ////////////////////////////////////////////////////////////////////////////////////////
 
         public static SceneConfigurationFile ConvertJsonToConfigurationSettings(string jsonData)
         {

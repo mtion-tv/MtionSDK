@@ -4,7 +4,6 @@ using System.Collections.Generic;
 
 namespace mtion.room.sdk.action
 {
-    // Input Data
     [Serializable]
     public class ActionEntryPointData
     {
@@ -20,7 +19,6 @@ namespace mtion.room.sdk.action
         public Action<bool> OnComplete = null;
     }
 
-    // Definition Interface Data
     [Serializable]
     public sealed class ActionEntryPointInfo
     {

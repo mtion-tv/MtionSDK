@@ -1,6 +1,4 @@
-// Upgrade NOTE: replaced 'UNITY_INSTANCE_ID' with 'UNITY_VERTEX_INPUT_INSTANCE_ID'
 
-// Unity built-in shader source. Copyright (c) 2016 Unity Technologies. MIT license (see license.txt)
 
 #ifndef UNITY_STANDARD_INPUT_INCLUDED
 #define UNITY_STANDARD_INPUT_INCLUDED
@@ -10,8 +8,6 @@
 #include "UnityPBSLighting.cginc" // TBD: remove
 #include "UnityStandardUtils.cginc"
 
-//---------------------------------------
-// Directional lightmaps & Parallax require tangent space too
 #if (_NORMALMAP || DIRLIGHTMAP_COMBINED || _PARALLAXMAP)
 	#define _TANGENT_TO_WORLD 1
 #endif
@@ -20,7 +16,6 @@
 	#define _DETAIL 1
 #endif
 
-//---------------------------------------
 half4	   _Color;
 half		_Cutoff;
 
@@ -53,8 +48,6 @@ half4		_EmissionColor;
 sampler2D   _EmissionMap;
 float4		_EmissionMap_ST;
 
-//-------------------------------------------------------------------------------------
-// Input functions
 
 struct VertexInput
 {
@@ -98,8 +91,6 @@ half3 Albedo(float4 texcoords)
 
 #if _DETAIL
 	#if (SHADER_TARGET < 30)
-		// SM20: instruction count limitation
-		// SM20: no detail mask
 		half mask = 1;
 	#else
 		half mask = DetailMask(texcoords.xy);
@@ -130,8 +121,6 @@ half Alpha(float2 uv)
 half Occlusion(float2 uv)
 {
 #if (SHADER_TARGET < 30)
-	// SM20: instruction count limitation
-	// SM20: simpler occlusion
 	return tex2D(_OcclusionMap, uv).r;
 #else
 	half occ = tex2D(_OcclusionMap, uv).r;
@@ -181,7 +170,6 @@ half2 MetallicGloss(float2 uv)
 		mg.g = _Glossiness;
 	#endif
 #endif
-	// it's roughness, not glossiness. invert it
 	mg.g = 1.0f - mg.g;
 	return mg;
 }
@@ -216,8 +204,6 @@ half3 Emission(float2 uv)
 #endif
 }
 
-// see this link regarding unpacking instructions:
-// https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/schema/material.normalTextureInfo.schema.json#L13
 half3 UnpackScaleNormalGLTF(half4 packednormal, half bumpScale)
 {
 	float3 normal = packednormal.xyz * 2.0 - 1.0;
@@ -252,13 +238,10 @@ half3 NormalInTangentSpace(float4 texcoords)
 
 float4 Parallax (float4 texcoords, half3 viewDir)
 {
-// D3D9/SM30 supports up to 16 samplers, skip the parallax map in case we exceed the limit
 #define EXCEEDS_D3D9_SM3_MAX_SAMPLER_COUNT  (defined(LIGHTMAP_ON) && defined(SHADOWS_SHADOWMASK) && defined(SHADOWS_SCREEN) && defined(_NORMALMAP) && \
 											 defined(_EMISSION) && defined(_DETAIL) && (defined(_METALLICGLOSSMAP) || defined(_SPECGLOSSMAP)))
 
 #if !defined(_PARALLAXMAP) || (SHADER_TARGET < 30) || (defined(SHADER_API_D3D9) && EXCEEDS_D3D9_SM3_MAX_SAMPLER_COUNT)
-	// SM20: instruction count limitation
-	// SM20: no parallax
 	return texcoords;
 #else
 	half h = tex2D (_ParallaxMap, texcoords.xy).g;

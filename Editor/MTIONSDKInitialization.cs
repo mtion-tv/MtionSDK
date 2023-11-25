@@ -49,21 +49,18 @@ namespace mtion.room.sdk
 
             }
 
-            // Verify that the scene is valid
             var roomSDKObject = GameObject.FindObjectOfType<MTIONSDKRoom>();
             if (roomSDKObject != null)
             {
                 FixTrackedAsset(roomSDKObject, MTIONObjectType.MTIONSDK_ROOM);
             }
 
-            // Verify that the scene is valid
             var envSDKObject = GameObject.FindObjectOfType<MTIONSDKEnvironment>();
             if (envSDKObject != null)
             {
                 FixTrackedAsset(envSDKObject, MTIONObjectType.MTIONSDK_ENVIRONMENT);
             }
 
-            // Verify that the scene is valid
             var assetSDKObject = GameObject.FindObjectOfType<MTIONSDKAsset>();
             if (assetSDKObject != null)
             {
@@ -117,13 +114,10 @@ namespace mtion.room.sdk
 
         private static void FixTrackedAsset(MTIONSDKDescriptorSceneBase descriptorBase, MTIONObjectType mType)
         {
-            // Get scene environment 
             var scene = EditorSceneManager.GetActiveScene();
 
-            // Create scene descriptor
             SDKEditorUtil.InitAddressableAssetFields(descriptorBase, mType, scene.name);
 
-            // Save assets
             AssetDatabase.SaveAssets();
             EditorSceneManager.MarkSceneDirty(scene);
         }

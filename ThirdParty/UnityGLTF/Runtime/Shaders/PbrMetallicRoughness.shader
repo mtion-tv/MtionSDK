@@ -1,13 +1,4 @@
-// Unity built-in shader source. Copyright (c) 2016 Unity Technologies. MIT license (see license.txt)
 
-// Derived from DefaultResourcesExtra\Standard.shader.
-// Available as part of the "Built in shaders" download from https://unity3d.com/get-unity/download/archive
-// Changes include:
-//   Excluding _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A from all ShadowCaster passes
-//   Removing many Properties not relevant to this shader's logic (and rename visible strings for others)
-//   Using a CustomEditor GUI for the shader configuration
-//   Adding and respecting the _Cull property to support double-sided materials
-//   Forwarding calls through VetexColor.cginc's vert_vcol/frag_vcol (instead of directly to UnityStandardCoreForward.cginc's vertBase/fragBase) to add VertexColor support
 
 Shader "GLTF/PbrMetallicRoughness"
 {
@@ -37,7 +28,6 @@ Shader "GLTF/PbrMetallicRoughness"
 
 		_Cull("Cull", Int) = 0
 
-		// Blending state
 		[HideInInspector] _Mode ("__mode", Float) = 0.0
 		[HideInInspector] _SrcBlend ("__src", Float) = 1.0
 		[HideInInspector] _DstBlend ("__dst", Float) = 0.0
@@ -54,8 +44,6 @@ Shader "GLTF/PbrMetallicRoughness"
 		LOD 300
 	
 
-		// ------------------------------------------------------------------
-		//  Base forward pass (directional light, emission, lightmaps, ...)
 		Pass
 		{
 			Name "FORWARD" 
@@ -68,17 +56,11 @@ Shader "GLTF/PbrMetallicRoughness"
 			CGPROGRAM
 			#pragma target 3.0
 
-			// -------------------------------------
 
 			#pragma shader_feature _NORMALMAP
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 			#pragma shader_feature _EMISSION
 			#pragma shader_feature _METALLICGLOSSMAP
-			// #pragma shader_feature ___ _DETAIL_MULX2
-			// #pragma shader_feature _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-			// #pragma shader_feature _ _SPECULARHIGHLIGHTS_OFF
-			// #pragma shader_feature _ _GLOSSYREFLECTIONS_OFF
-			// #pragma shader_feature _PARALLAXMAP
 
 			#pragma multi_compile_fwdbase
 			#pragma multi_compile_fog
@@ -91,8 +73,6 @@ Shader "GLTF/PbrMetallicRoughness"
 
 			ENDCG
 		}
-		// ------------------------------------------------------------------
-		//  Additive forward pass (one light per pass)
 		Pass
 		{
 			Name "FORWARD_DELTA"
@@ -105,16 +85,11 @@ Shader "GLTF/PbrMetallicRoughness"
 			CGPROGRAM
 			#pragma target 3.0
 
-			// -------------------------------------
 
 
 			#pragma shader_feature _NORMALMAP
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 			#pragma shader_feature _METALLICGLOSSMAP
-			// #pragma shader_feature _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-			// #pragma shader_feature _ _SPECULARHIGHLIGHTS_OFF
-			// #pragma shader_feature ___ _DETAIL_MULX2
-			// #pragma shader_feature _PARALLAXMAP
 
 			#pragma multi_compile_fwdadd_fullshadows
 			#pragma multi_compile_fog
@@ -126,8 +101,6 @@ Shader "GLTF/PbrMetallicRoughness"
 
 			ENDCG
 		}
-		// ------------------------------------------------------------------
-		//  Shadow rendering pass
 		Pass {
 			Name "ShadowCaster"
 			Tags { "LightMode" = "ShadowCaster" }
@@ -137,12 +110,10 @@ Shader "GLTF/PbrMetallicRoughness"
 			CGPROGRAM
 			#pragma target 3.0
 
-			// -------------------------------------
 
 
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 			#pragma shader_feature _METALLICGLOSSMAP
-			// #pragma shader_feature _PARALLAXMAP
 			#pragma multi_compile_shadowcaster
 			#pragma multi_compile_instancing
 
@@ -153,8 +124,6 @@ Shader "GLTF/PbrMetallicRoughness"
 
 			ENDCG
 		}
-		// ------------------------------------------------------------------
-		//  Deferred pass
 		Pass
 		{
 			Name "DEFERRED"
@@ -165,16 +134,11 @@ Shader "GLTF/PbrMetallicRoughness"
 			#pragma exclude_renderers nomrt
 
 
-			// -------------------------------------
 
 			#pragma shader_feature _NORMALMAP
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 			#pragma shader_feature _EMISSION
 			#pragma shader_feature _METALLICGLOSSMAP
-			// #pragma shader_feature _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-			// #pragma shader_feature _ _SPECULARHIGHLIGHTS_OFF
-			// #pragma shader_feature ___ _DETAIL_MULX2
-			// #pragma shader_feature _PARALLAXMAP
 
 			#pragma multi_compile_prepassfinal
 			#pragma multi_compile_instancing
@@ -187,9 +151,6 @@ Shader "GLTF/PbrMetallicRoughness"
 			ENDCG
 		}
 
-		// ------------------------------------------------------------------
-		// Extracts information for lightmapping, GI (emission, albedo, ...)
-		// This pass it not used during regular rendering.
 		Pass
 		{
 			Name "META" 
@@ -203,8 +164,6 @@ Shader "GLTF/PbrMetallicRoughness"
 
 			#pragma shader_feature _EMISSION
 			#pragma shader_feature _METALLICGLOSSMAP
-			// #pragma shader_feature _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-			// #pragma shader_feature ___ _DETAIL_MULX2
 			#pragma shader_feature EDITOR_VISUALIZATION
 
 			#include "UnityStandardMeta.cginc"
@@ -217,8 +176,6 @@ Shader "GLTF/PbrMetallicRoughness"
 		Tags { "RenderType"="Opaque" "PerformanceChecks"="False" }
 		LOD 150
 
-		// ------------------------------------------------------------------
-		//  Base forward pass (directional light, emission, lightmaps, ...)
 		Pass
 		{
 			Name "FORWARD" 
@@ -234,11 +191,6 @@ Shader "GLTF/PbrMetallicRoughness"
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 			#pragma shader_feature _EMISSION
 			#pragma shader_feature _METALLICGLOSSMAP
-			// #pragma shader_feature _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-			// #pragma shader_feature _ _SPECULARHIGHLIGHTS_OFF
-			// #pragma shader_feature _ _GLOSSYREFLECTIONS_OFF
-			// SM2.0: NOT SUPPORTED shader_feature ___ _DETAIL_MULX2
-			// SM2.0: NOT SUPPORTED shader_feature _PARALLAXMAP
 
 			#pragma skip_variants SHADOWS_SOFT DIRLIGHTMAP_COMBINED
 
@@ -252,8 +204,6 @@ Shader "GLTF/PbrMetallicRoughness"
 
 			ENDCG
 		}
-		// ------------------------------------------------------------------
-		//  Additive forward pass (one light per pass)
 		Pass
 		{
 			Name "FORWARD_DELTA"
@@ -269,10 +219,6 @@ Shader "GLTF/PbrMetallicRoughness"
 			#pragma shader_feature _NORMALMAP
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 			#pragma shader_feature _METALLICGLOSSMAP
-			// #pragma shader_feature _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-			// #pragma shader_feature _ _SPECULARHIGHLIGHTS_OFF
-			// #pragma shader_feature ___ _DETAIL_MULX2
-			// SM2.0: NOT SUPPORTED shader_feature _PARALLAXMAP
 			#pragma skip_variants SHADOWS_SOFT
 			
 			#pragma multi_compile_fwdadd_fullshadows
@@ -285,8 +231,6 @@ Shader "GLTF/PbrMetallicRoughness"
 
 			ENDCG
 		}
-		// ------------------------------------------------------------------
-		//  Shadow rendering pass
 		Pass {
 			Name "ShadowCaster"
 			Tags { "LightMode" = "ShadowCaster" }
@@ -309,9 +253,6 @@ Shader "GLTF/PbrMetallicRoughness"
 			ENDCG
 		}
 
-		// ------------------------------------------------------------------
-		// Extracts information for lightmapping, GI (emission, albedo, ...)
-		// This pass it not used during regular rendering.
 		Pass
 		{
 			Name "META" 
@@ -325,8 +266,6 @@ Shader "GLTF/PbrMetallicRoughness"
 
 			#pragma shader_feature _EMISSION
 			#pragma shader_feature _METALLICGLOSSMAP
-			// #pragma shader_feature _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-			// #pragma shader_feature ___ _DETAIL_MULX2
 			#pragma shader_feature EDITOR_VISUALIZATION
 
 			#include "UnityStandardMeta.cginc"

@@ -14,7 +14,6 @@ namespace mtion.room.sdk
         private MVirtualAssetTracker instance_ = null;
         private bool mExtraConfiguration = false;
 
-        // Overlay
         private object sceneOverlayWindow;
         private MethodInfo showSceneViewOverlay;
 
@@ -25,7 +24,6 @@ namespace mtion.room.sdk
                 instance_ = target as MVirtualAssetTracker;
             }
 
-            // Setup Scene Overlay
             var unityEditor = Assembly.GetAssembly(typeof(UnityEditor.SceneView));
             var overlayWindowType = unityEditor.GetType("UnityEditor.OverlayWindow");
             var sceneViewOverlayType = unityEditor.GetType("UnityEditor.SceneViewOverlay");
@@ -49,7 +47,6 @@ namespace mtion.room.sdk
 
         private static void DoOverlayUI(UnityEngine.Object target, SceneView sceneView)
         {
-            //GUILayout.Button("Hello there");
             MVirtualAssetTracker asset = (MVirtualAssetTracker)target;
             if (GUILayout.Button("Asset Type: " + asset.GetAssetType().ToString()))
             {

@@ -16,7 +16,6 @@ namespace mtion.room.sdk
       private MVirtualLightingTracker instance_ = null;
         private bool mExtraConfiguration = false;
 
-        // Overlay
         private object sceneOverlayWindow;
         private MethodInfo showSceneViewOverlay;
 
@@ -29,7 +28,6 @@ namespace mtion.room.sdk
             }
 
 
-            // Setup Scene Overlay
             var unityEditor = Assembly.GetAssembly(typeof(UnityEditor.SceneView));
             var overlayWindowType = unityEditor.GetType("UnityEditor.OverlayWindow");
             var sceneViewOverlayType = unityEditor.GetType("UnityEditor.SceneViewOverlay");
@@ -53,7 +51,6 @@ namespace mtion.room.sdk
 
         private static void DoOverlayUI(UnityEngine.Object target, SceneView sceneView)
         {
-            //GUILayout.Button("Hello there");
             MVirtualLightingTracker asset = (MVirtualLightingTracker)target;
             if (GUILayout.Button("Light: " + asset.GetType().ToString()))
             {
@@ -78,9 +75,6 @@ namespace mtion.room.sdk
         public override void OnInspectorGUI()
         {
 
-            ///////////////////////////////////////////////////////////////////////
-            // Configuration Control
-            ///////////////////////////////////////////////////////////////////////
 
             GUI.enabled = !Application.isPlaying;
 
@@ -93,7 +87,6 @@ namespace mtion.room.sdk
 
             GUI.enabled = true;
 
-            // Setup Visualization
             if (instance_.gameObject.GetComponent<Light>() == null)
             {
                 var tempLight = instance_.gameObject.AddComponent<Light>();
@@ -104,20 +97,17 @@ namespace mtion.room.sdk
 
             var lightComponent = instance_.gameObject.GetComponent<Light>();
             
-            // Light Type
             LightType unityType = instance_.LightParams.LightType == LightingComponentType.PointLight ? LightType.Point : LightType.Spot;
             if (lightComponent.type != unityType)
             {
                 lightComponent.type = unityType;
             }
 
-            // Light Intensity
             if (lightComponent.intensity != instance_.LightParams.LightIntensity)
             {
                 lightComponent.intensity = instance_.LightParams.LightIntensity;
             }
 
-            // Light Color
             if (((Vector4) lightComponent.color) != instance_.LightParams.LightColor)
             {
                 lightComponent.color = instance_.LightParams.LightColor;

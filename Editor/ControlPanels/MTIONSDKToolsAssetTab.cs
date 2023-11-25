@@ -32,7 +32,7 @@ namespace mtion.room.sdk
         public static ReorderableList _assetComponentRList = null;
         public static List<MVirtualAssetTracker> _assetComponents = new List<MVirtualAssetTracker>();
 
-        private static MTIONSDKDescriptorSceneBase _roomSDKDescriptorObject = null;
+        private static MTIONSDKRoom _roomSDKDescriptorObject = null;
         private static Vector2 _scrollPos;
 
         private static bool _openCameraFoldout;
@@ -40,17 +40,13 @@ namespace mtion.room.sdk
         private static bool _openLightsFoldout;
         private static bool _openAssetsFoldout;
 
-
-
         public static void Initialize()
         {
-            // Find Room Descriptor Object
             if (_roomSDKDescriptorObject == null)
             {
-                _roomSDKDescriptorObject = GameObject.FindObjectOfType<MTIONSDKDescriptorSceneBase>();
+                _roomSDKDescriptorObject = GameObject.FindObjectOfType<MTIONSDKRoom>();
             }
 
-            // Create reorderable list of camera views
             if (_cameraViewHints == null)
             {
                 _cameraViewHints = new ReorderableList(_virtualcameraEvents,
@@ -71,7 +67,6 @@ namespace mtion.room.sdk
                     rect.y += 2;
                     EditorGUI.LabelField(new Rect(rect.x, rect.y, 200, EditorGUIUtility.singleLineHeight), vc.name, MTIONSDKToolsWindow.LabelStyle);
 
-                    // Keycode assignments
                     vc.UNITYEDITOR_KeyCodeNum = EditorGUI.IntField(
                         new Rect(rect.x += 175, rect.y, 30, EditorGUIUtility.singleLineHeight), vc.UNITYEDITOR_KeyCodeNum, MTIONSDKToolsWindow.TextFieldStyle);
                     if (vc.UNITYEDITOR_KeyCodeNum < 1) vc.UNITYEDITOR_KeyCodeNum = 1;
@@ -93,7 +88,6 @@ namespace mtion.room.sdk
                     }
                     Debug.Assert(vc.CameraParams.KeyCodeList.Count == vc.UNITYEDITOR_KeyCodeNum);
 
-                    // Set up key selection
                     int w = 100;
                     int space = 15;
                     int startOffset = 25;
@@ -166,10 +160,8 @@ namespace mtion.room.sdk
                     int width = 150;
                     rect.y += 2;
 
-                    // Name
                     EditorGUI.LabelField(new Rect(xpos, rect.y, width, EditorGUIUtility.singleLineHeight), display.name, MTIONSDKToolsWindow.LabelStyle);
 
-                    // Keycode assignments
                     xpos += width + spacing + 25;
                     width = 30;
                     display.UNITYEDITOR_KeyCodeNum = EditorGUI.IntField(
@@ -195,7 +187,6 @@ namespace mtion.room.sdk
                     Debug.Assert(display.DisplayParams.KeyCodeList.Count == display.UNITYEDITOR_KeyCodeNum);
 
 
-                    // Keycode Selection 
                     xpos += width + spacing;
                     width = 100;
                     for (int i = 0; i < display.DisplayParams.KeyCodeList.Count; ++i)
@@ -252,11 +243,9 @@ namespace mtion.room.sdk
                     int width = 185;
                     rect.y += 2;
 
-                    // Name
                     EditorGUI.LabelField(new Rect(xpos, rect.y, width, EditorGUIUtility.singleLineHeight), 
                         light.name, MTIONSDKToolsWindow.LabelStyle);
 
-                    // Display Type
                     xpos += width + spacing;
                     width = 150;
                     var previousType = light.LightParams.LightType;
@@ -318,7 +307,6 @@ namespace mtion.room.sdk
                     int width = 200;
                     rect.y += 2;
 
-                    // Asset Name
                     width = 250;
                     spacing = 25;
                     string cacheName = assetTracker.Name;
@@ -329,7 +317,6 @@ namespace mtion.room.sdk
                         updated = true;
                     }
 
-                    // Asset Type
                     xpos += width + spacing;
                     width = 150;
                     spacing = 25;
@@ -341,7 +328,6 @@ namespace mtion.room.sdk
                         updated = true;
                     }
 
-                    // Asset Description
                     xpos += width + spacing;
                     width = 400;
                     string cacheDesc = assetTracker.Description;
@@ -373,7 +359,6 @@ namespace mtion.room.sdk
         {
             RefreshList();
 
-            // Collect all Present views
             _virtualcameraEvents.Sort(delegate (MVirtualCameraEventTracker x, MVirtualCameraEventTracker y)
             {
                 if (x.OrderPrecedence < y.OrderPrecedence)
@@ -389,7 +374,6 @@ namespace mtion.room.sdk
                 return 0;
             });
 
-            // Reorder
             int index = 1;
             foreach (var vc in _virtualcameraEvents)
             {
@@ -400,10 +384,9 @@ namespace mtion.room.sdk
 
         private static void RefreshList()
         {
-            // Find Room Descriptor Object
             if (_roomSDKDescriptorObject == null)
             {
-                _roomSDKDescriptorObject = GameObject.FindObjectOfType<MTIONSDKDescriptorSceneBase>();
+                _roomSDKDescriptorObject = GameObject.FindObjectOfType<MTIONSDKRoom>();
             }
 
             if (_roomSDKDescriptorObject == null ||
@@ -413,38 +396,43 @@ namespace mtion.room.sdk
             }
 
 
-            if (_roomSDKDescriptorObject && _roomSDKDescriptorObject.SDKRoot == null)
+            if (_roomSDKDescriptorObject)
             {
-                _roomSDKDescriptorObject.SDKRoot = GameObject.Find("SDK PROPS");
                 if (_roomSDKDescriptorObject.SDKRoot == null)
                 {
-                    _roomSDKDescriptorObject.SDKRoot = new GameObject("SDK PROPS");
-                    _roomSDKDescriptorObject.SDKRoot.transform.parent = _roomSDKDescriptorObject.transform;
-                    _roomSDKDescriptorObject.SDKRoot.transform.localPosition = Vector3.zero;
-                    _roomSDKDescriptorObject.SDKRoot.transform.localRotation = Quaternion.identity;
-                    _roomSDKDescriptorObject.SDKRoot.transform.localScale = Vector3.one;
+                    _roomSDKDescriptorObject.SDKRoot = GameObject.Find("SDK PROPS");
+                    if (_roomSDKDescriptorObject.SDKRoot == null)
+                    {
+                        _roomSDKDescriptorObject.SDKRoot = new GameObject("SDK PROPS");
+                        _roomSDKDescriptorObject.SDKRoot.transform.localPosition = Vector3.zero;
+                        _roomSDKDescriptorObject.SDKRoot.transform.localRotation = Quaternion.identity;
+                        _roomSDKDescriptorObject.SDKRoot.transform.localScale = Vector3.one;
+                    }
+                }
+
+                if (_roomSDKDescriptorObject.SDKRoot.transform.parent != null)
+                {
+                    _roomSDKDescriptorObject.SDKRoot.transform.parent = null;
+                    int siblingIndex = _roomSDKDescriptorObject.ObjectReferenceProp.transform.GetSiblingIndex();
+                    _roomSDKDescriptorObject.SDKRoot.transform.SetSiblingIndex(siblingIndex + 1);
                 }
             }
 
-            // Collect all current camera views
             ComponentVerificationUtil.VerifyAllComponentsIntegrity(_roomSDKDescriptorObject, MTIONObjectType.MTIONSDK_CAMERA);
             var virtualCameraViews = GameObject.FindObjectsOfType<MVirtualCameraEventTracker>().OrderBy(x => x.OrderPrecedence).ToList();
             _virtualcameraEvents.Clear();
             _virtualcameraEvents.AddRange(virtualCameraViews);
 
-            // Collect current display components
             ComponentVerificationUtil.VerifyAllComponentsIntegrity(_roomSDKDescriptorObject, MTIONObjectType.MTIONSDK_DISPLAY);
             var virtualDisplays = GameObject.FindObjectsOfType<MVirtualDisplayTracker>();
             _displayComponents.Clear();
             _displayComponents.AddRange(virtualDisplays);
 
-            // Collect all lighting components
             ComponentVerificationUtil.VerifyAllComponentsIntegrity(_roomSDKDescriptorObject, MTIONObjectType.MTIONSDK_LIGHT);
             var virtualLights = GameObject.FindObjectsOfType<MVirtualLightingTracker>();
             _lightingComponents.Clear();
             _lightingComponents.AddRange(virtualLights);
 
-            // Collect all asset components
             ComponentVerificationUtil.VerifyAllComponentsIntegrity(_roomSDKDescriptorObject, MTIONObjectType.MTIONSDK_ASSET);
             var virtualAssets = GameObject.FindObjectsOfType<MVirtualAssetTracker>();
             _assetComponents.Clear();
@@ -490,16 +478,13 @@ namespace mtion.room.sdk
 
                     GUI.enabled = !Application.isPlaying;
 
-                    // Draw Reorderable list
                     _displayComponentRList.DoLayoutList();
 
-                    // Create object
                     if (GUILayout.Button("Add Display", MTIONSDKToolsWindow.MediumButtonStyle))
                     {
                         GameObject go = new GameObject("UniversalDisplay (" + (_displayComponents.Count + 1) + ")");
                         go.transform.position = GetNewObjectPosition();
 
-                        // Place in SDK Root object
                         if (_roomSDKDescriptorObject == null)
                         {
                             Debug.LogError("Scene not setup correctly.");
@@ -511,7 +496,6 @@ namespace mtion.room.sdk
                         var d = go.AddComponent<MVirtualDisplayTracker>();
                         SDKEditorUtil.InitVirtualComponentFields(d);
 
-                        // Get display and set gizmos
                         d.gizmoDisplaySelection = 1;
 
                         _displayComponents.Add(d);
@@ -534,16 +518,13 @@ namespace mtion.room.sdk
 
                     GUI.enabled = !Application.isPlaying;
 
-                    // Draw Reorderable list
                     _lightingComponentRList.DoLayoutList();
 
-                    // Create object
                     if (GUILayout.Button("Add Light", MTIONSDKToolsWindow.MediumButtonStyle))
                     {
                         GameObject go = new GameObject("Lighting Component (" + (_lightingComponents.Count + 1) + ")");
                         go.transform.position = GetNewObjectPosition();
 
-                        // Place in SDK Root object
                         if (_roomSDKDescriptorObject == null)
                         {
                             Debug.LogError("Scene not setup correctly.");
@@ -575,16 +556,13 @@ namespace mtion.room.sdk
                 {
                     GUILayout.Space(10);
 
-                    // Draw Reorderable list
                     _cameraViewHints.DoLayoutList();
 
-                    // Create object
                     if (GUILayout.Button("Add Virtual Camera", MTIONSDKToolsWindow.MediumButtonStyle))
                     {
                         GameObject go = new GameObject("VirtualCameraElement (" + _virtualcameraEvents.Count + ")");
                         go.transform.position = GetNewObjectPosition();
 
-                        // Place in SDK Root object
                         if (_roomSDKDescriptorObject == null)
                         {
                             Debug.LogError("Scene not setup correctly.");
@@ -618,16 +596,13 @@ namespace mtion.room.sdk
                 {
                     GUILayout.Space(10);
 
-                    // Draw Reorderable list
                     _assetComponentRList.DoLayoutList();
 
-                    // Create object
                     if (GUILayout.Button("Add 3D Asset", MTIONSDKToolsWindow.MediumButtonStyle))
                     {
                         GameObject go = new GameObject("VirtualAsset (" + _assetComponents.Count + ")");
                         go.transform.position = GetNewObjectPosition();
 
-                        // Place in SDK Root object
                         if (_roomSDKDescriptorObject == null)
                         {
                             Debug.LogError("Scene not setup correctly.");
@@ -651,16 +626,13 @@ namespace mtion.room.sdk
 
         private static void StartBox()
         {
-            // Setup a new modified box skin for Unity's new GUI
             GUIStyle modifiedBox = GUI.skin.GetStyle("Box");
 
-            // If we're not using the lighter UI skin, preserve the white backgrounds we used to have
             if (EditorGUIUtility.isProSkin == false)
             {
                 modifiedBox.normal.background = Texture2D.whiteTexture;
             }
 
-            // Create the group normally using the modified box style
             EditorGUILayout.BeginHorizontal(modifiedBox);
             GUILayout.Label(string.Empty, GUILayout.MaxWidth(5));
 
@@ -676,7 +648,6 @@ namespace mtion.room.sdk
             GUILayout.Label(string.Empty, GUILayout.MaxWidth(5));
             EditorGUILayout.EndHorizontal();
 
-            // Add vertical space at the end of every box.
             GUILayout.Label(string.Empty, GUILayout.MaxHeight(5));
         }
 

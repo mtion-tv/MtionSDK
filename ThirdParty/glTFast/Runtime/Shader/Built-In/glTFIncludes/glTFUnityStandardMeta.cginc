@@ -1,26 +1,9 @@
-// Copyright 2020 Andreas Atteneder
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
 
-// Based on Unity built-in shader source. Copyright (c) 2016 Unity Technologies. MIT license (see license.txt)
 
 
 #ifndef UNITY_STANDARD_META_INCLUDED
 #define UNITY_STANDARD_META_INCLUDED
 
-// Functionality for Standard shader "meta" pass
-// (extracts albedo/emission for lightmapper etc.)
 
 #include "UnityCG.cginc"
 #include "glTFUnityStandardInput.cginc"
@@ -70,9 +53,6 @@ v2f_meta vert_meta (VertexInput v)
     return o;
 }
 
-// Albedo for lightmapping should basically be diffuse color.
-// But rough metals (black diffuse) still scatter quite a lot of light around, so
-// we want to take some of that into account too.
 half3 UnityLightmappingAlbedo (half3 diffuse, half3 specular, half smoothness)
 {
     half roughness = SmoothnessToRoughness(smoothness);
@@ -83,8 +63,6 @@ half3 UnityLightmappingAlbedo (half3 diffuse, half3 specular, half smoothness)
 
 float4 frag_meta (v2f_meta i) : SV_Target
 {
-    // we're interested in diffuse & specular colors,
-    // and surface roughness to produce final albedo.
     
 #ifdef _METALLICGLOSSMAP
     FragmentCommonData data = UNITY_SETUP_BRDF_INPUT (i.uv,i.uv,i.color);

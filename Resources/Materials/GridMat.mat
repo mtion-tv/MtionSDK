@@ -8,9 +8,11 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: GridMat
-  m_Shader: {fileID: 46, guid: 0000000000000000f000000000000000, type: 0}
+  m_Shader: {fileID: 4800000, guid: 9df239adbcacee54d89bab06d050abc9, type: 3}
   m_ValidKeywords: []
-  m_InvalidKeywords: []
+  m_InvalidKeywords:
+  - _AXIS_Y
+  - _UVMODE_WORLDY
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -58,6 +60,9 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _Axis: 1
+    - _AxisDashScale: 0
+    - _AxisLineWidth: 0.1
     - _BumpScale: 1
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
@@ -65,16 +70,38 @@ Material:
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
+    - _GridScale: 1
+    - _LineWidthX: 0.03
+    - _LineWidthY: 0.03
+    - _MajorGridDiv: 10
+    - _MajorLineWidth: 0.07
     - _Metallic: 0
+    - _MinorLineWidth: 0.03
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
+    - _Radius: 2
+    - _RadiusWidth: 1
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
+    - _UVMode: 2
     - _UVSec: 0
     - _ZWrite: 1
     m_Colors:
+    - _BaseColor: {r: 0, g: 0, b: 0, a: 0.49019608}
+    - _CenterColor: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _LineColor: {r: 1, g: 1, b: 1, a: 1}
+    - _MajorLineColor: {r: 1, g: 1, b: 1, a: 1}
+    - _MinorLineColor: {r: 1, g: 1, b: 1, a: 1}
+    - _XAxisColor: {r: 1, g: 0, b: 0, a: 1}
+    - _XAxisDashColor: {r: 0.5, g: 0, b: 0, a: 1}
+    - _XColor: {r: 1, g: 0, b: 0, a: 1}
+    - _YAxisColor: {r: 0, g: 1, b: 0, a: 1}
+    - _YAxisDashColor: {r: 0, g: 0.5, b: 0, a: 1}
+    - _ZAxisColor: {r: 0, g: 0, b: 1, a: 1}
+    - _ZAxisDashColor: {r: 0, g: 0, b: 0.5, a: 1}
+    - _ZColor: {r: 0, g: 0, b: 1, a: 1}
   m_BuildTextureStacks: []

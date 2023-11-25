@@ -24,12 +24,10 @@ namespace mtion.room.sdk
             Bounds bounds;
             if (MeshFiltersAreReadable(meshFilters))
             {
-                //Calculate the target bounds using the vertices provided they are readable
                 bounds = GetBoundsUsingMeshFilters(meshFilters, target.transform);
             }
             else
             {
-                //Otherwise do it using the renderer bounds which doesn't account for world space rotation
                 bounds = GetBoundsUsingMeshRenderers(meshRenderers);
             }
 
@@ -67,7 +65,6 @@ namespace mtion.room.sdk
                 verticesList.AddRange(meshFilter.sharedMesh.vertices);
             }
 
-            //Find the max and min x,y,z values using all the vertices in order to calculate the bounds
             var vertices = verticesList.ToArray();
             var min = targetTransform.TransformPoint(vertices[0]);
             var max = min;

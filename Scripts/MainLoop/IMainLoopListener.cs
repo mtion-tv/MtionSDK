@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 namespace mtion.room.sdk.compiled.MainLoop
 {

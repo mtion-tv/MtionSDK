@@ -34,8 +34,6 @@ namespace mtion.room.sdk.compiled
             var output = new List<MTIONSDKAssetBase>();
             foreach (var duplicateGroup in groupedDuplicates)
             {
-                // Prioritize duplicates who's directories already exist 
-                // This means they've previously been exported
                 var foundPrevExport = false;
                 foreach (var duplicate in duplicateGroup)
                 {
@@ -64,7 +62,7 @@ namespace mtion.room.sdk.compiled
 
         public static bool AssetsAreDuplicates(MTIONSDKAssetBase asset1, MTIONSDKAssetBase asset2)
         {
-            return CheckGameObjectsIdentical(asset1.ObjectReference, asset2.ObjectReference);
+            return CheckGameObjectsIdentical(asset1.ObjectReferenceProp, asset2.ObjectReferenceProp);
         }
 
         private static bool CheckGameObjectsIdentical(GameObject obj1, GameObject obj2)
@@ -134,7 +132,6 @@ namespace mtion.room.sdk.compiled
                 return false;
             }
 
-            // Only check every 10 vertices
             for (int i = 0; i < vertices1.Length; i += 10)
             {
                 if (!vertices1[i].Equals(vertices2[i]))

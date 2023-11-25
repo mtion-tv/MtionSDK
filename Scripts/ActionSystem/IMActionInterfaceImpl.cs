@@ -15,9 +15,6 @@ namespace mtion.room.sdk.action
         public const string UNBIND_TO_ACTION_EXIT = "UnbindToActionComplete";
     }
     
-    ////////////////////////////////////////////////////////////////////////////////////////
-    ///  ACTION METADATA
-    ////////////////////////////////////////////////////////////////////////////////////////
 
     public enum ActionInvocationSource
     {
@@ -70,10 +67,6 @@ namespace mtion.room.sdk.action
         public CameraInfo CameraInfo;
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////////
-    ///  GENERIC ACTION INTERFACE
-    ///  - Called per valid invocation
-    ////////////////////////////////////////////////////////////////////////////////////////
 
     public interface IMActionExitEvent
     {
@@ -92,37 +85,42 @@ namespace mtion.room.sdk.action
         T GetParameterValue<T>(int index);
     }
 
-    public interface IMActionInterfaceImpl
+    public interface IAction
+    {
+        
+    }
+
+    public interface IMActionInterfaceImpl : IAction
     {
         public void ActionEntryPoint(ActionMetadata metadata);
     }
 
-    public interface IMActionInterfaceImpl<T0>
+    public interface IMActionInterfaceImpl<T0> : IAction
     {
         public void ActionEntryPoint(T0 param0, ActionMetadata metadata);
     }
 
-    public interface IMActionInterfaceImpl<T0, T1>
+    public interface IMActionInterfaceImpl<T0, T1> : IAction
     {
         public void ActionEntryPoint(T0 param0, T1 param1, ActionMetadata metadata);
     }
 
-    public interface IMActionInterfaceImpl<T0, T1, T2>
+    public interface IMActionInterfaceImpl<T0, T1, T2> : IAction
     {
         public void ActionEntryPoint(T0 param0, T1 param1, T2 param2, ActionMetadata metadata);
     }
 
-    public interface IMActionInterfaceImpl<T0, T1, T2, T3>
+    public interface IMActionInterfaceImpl<T0, T1, T2, T3> : IAction
     {
         public void ActionEntryPoint(T0 param0, T1 param1, T2 param2, T3 param3, ActionMetadata metadata);
     }
 
-    public interface IMActionInterfaceImpl<T0, T1, T2, T3, T4>
+    public interface IMActionInterfaceImpl<T0, T1, T2, T3, T4> : IAction
     {
         public void ActionEntryPoint(T0 param0, T1 param1, T2 param2, T3 param3, T4 param4, ActionMetadata metadata);
     }
 
-    public interface IMActionInterfaceImpl<T0, T1, T2, T3, T4, T5>
+    public interface IMActionInterfaceImpl<T0, T1, T2, T3, T4, T5> : IAction
     {
         public void ActionEntryPoint(T0 param0, T1 param1, T2 param2, T3 param3, T4 param4, T5 param5, ActionMetadata metadata);
     }

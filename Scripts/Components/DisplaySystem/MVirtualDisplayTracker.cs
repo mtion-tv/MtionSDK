@@ -16,7 +16,6 @@ namespace mtion.room.sdk
 
         public compiled.DisplayParameters DisplayParams = new compiled.DisplayParameters();
 
-        // Previews
         [SerializeField]
         private GameObject visualizationQuadTemp = null;
         private int gizmoDisplayCurrent = -1;
@@ -28,9 +27,6 @@ namespace mtion.room.sdk
         }
 
 #if UNITY_EDITOR
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////
-        /// GIZMO
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////
         public int UNITYEDITOR_KeyCodeNum = 2;
 
         private void OnDrawGizmos()
@@ -73,7 +69,6 @@ namespace mtion.room.sdk
             {
                 bool updated = false;
 
-                // Default to 16:9 
                 if (gizmoDisplaySelection == 0 || gizmoDisplaySelection == 1)
                 {
                     updated = true;
@@ -108,7 +103,6 @@ namespace mtion.room.sdk
         }
 #endif
 
-        // Start is called before the first frame update
         void Start()
         {
 
@@ -119,9 +113,6 @@ namespace mtion.room.sdk
  
         }
 
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////
-        /// PUBLIC API
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////
         public compiled.DisplayComponentType GetDisplayType()
         {
             return DisplayParams.DisplayType;

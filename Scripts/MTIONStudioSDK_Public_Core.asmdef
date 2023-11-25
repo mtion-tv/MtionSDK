@@ -1,23 +1,31 @@
 {
-    "name": "MTIONStudioSDK_Public_Core",
-    "rootNamespace": "",
-    "references": [
-        "GUID:b46af7ef1acfef34ebc90ce2083b8ede",
-        "GUID:6f5cb51ce6e5293468b714933a38a33a",
-        "GUID:d4349cc6b4264a04aa6d03facb6c2dd5"
-    ],
-    "includePlatforms": [
-        "Editor",
-        "WindowsStandalone64"
-    ],
-    "excludePlatforms": [],
-    "allowUnsafeCode": false,
-    "overrideReferences": true,
-    "precompiledReferences": [
-        "Newtonsoft.Json.dll"
-    ],
-    "autoReferenced": true,
-    "defineConstraints": [],
-    "versionDefines": [],
-    "noEngineReferences": false
+    "name":  "MTIONStudioSDK_Public_Core",
+    "rootNamespace":  "",
+    "references":  [
+                       "GUID:b46af7ef1acfef34ebc90ce2083b8ede",
+                       "GUID:6f5cb51ce6e5293468b714933a38a33a",
+                       "GUID:d4349cc6b4264a04aa6d03facb6c2dd5"
+                   ],
+    "includePlatforms":  [
+                             "Editor",
+                             "WindowsStandalone64"
+                         ],
+    "excludePlatforms":  [
+
+                         ],
+    "allowUnsafeCode":  false,
+    "overrideReferences":  true,
+    "precompiledReferences":  [
+                                  "Newtonsoft.Json.dll",
+                                  "MTIONStudioSDK_Public_Compiled.dll",
+                                  "UnityGLTFScripts.dll"
+                              ],
+    "autoReferenced":  true,
+    "defineConstraints":  [
+
+                          ],
+    "versionDefines":  [
+
+                       ],
+    "noEngineReferences":  false
 }

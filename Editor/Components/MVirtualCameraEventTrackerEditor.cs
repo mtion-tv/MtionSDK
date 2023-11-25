@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -30,7 +30,6 @@ namespace mtion.room.sdk
 
 
 
-        // Overlay
         private object sceneOverlayWindow;
         private MethodInfo showSceneViewOverlay;
 
@@ -53,7 +52,6 @@ namespace mtion.room.sdk
 
                 TrackerEditorCamera.VizCamera = TrackerEditorCamera.cameraObject.AddComponent<Camera>();
 
-                // Generate Texture
                 TrackerEditorCamera.VizTexture = new RenderTexture((int)(TrackerEditorCamera.defaultTextureHeight * instance_.CameraParams.AspectRatio), (int)TrackerEditorCamera.defaultTextureHeight, 0);
                 TrackerEditorCamera.VizCamera.targetTexture = TrackerEditorCamera.VizTexture;
             }
@@ -64,7 +62,6 @@ namespace mtion.room.sdk
             }
 
 
-            // Setup Scene Overlay
             var unityEditor = Assembly.GetAssembly(typeof(UnityEditor.SceneView));
             var overlayWindowType = unityEditor.GetType("UnityEditor.OverlayWindow");
             var sceneViewOverlayType = unityEditor.GetType("UnityEditor.SceneViewOverlay");
@@ -87,7 +84,6 @@ namespace mtion.room.sdk
         }
         private static void DoOverlayUI(UnityEngine.Object target, SceneView sceneView)
         {
-            //GUILayout.Button("Hello there");
             MVirtualCameraEventTracker tracker = (MVirtualCameraEventTracker)target;
 
             if (TrackerEditorCamera.VizCamera && TrackerEditorCamera.sceneViewCamera)
@@ -98,7 +94,6 @@ namespace mtion.room.sdk
                 TrackerEditorCamera.VizCamera.farClipPlane = tracker.CameraParams.FarPlane;
                 TrackerEditorCamera.VizCamera.clearFlags = tracker.CameraParams.ClearFlags;
 
-                // Update render target
                 float aspect = TrackerEditorCamera.VizTexture.width / (float)TrackerEditorCamera.VizTexture.height;
                 if (Math.Abs(aspect - tracker.CameraParams.AspectRatio) > 0.01f)
                 {
@@ -110,7 +105,6 @@ namespace mtion.room.sdk
                     TrackerEditorCamera.VizCamera.Render();
                 }
 
-                // Draw preview
                 if (GUILayout.Button(TrackerEditorCamera.VizTexture))
                 {
                     TrackerEditorCamera.TriggerSelection = true;
@@ -146,9 +140,6 @@ namespace mtion.room.sdk
 
         public override void OnInspectorGUI()
         {
-            ///////////////////////////////////////////////////////////////////////
-            // Configuration Control
-            ///////////////////////////////////////////////////////////////////////
 
             GUI.enabled = !Application.isPlaying;
 
@@ -173,13 +164,11 @@ namespace mtion.room.sdk
 
 
 
-            // General Content
             EditorGUILayout.Space();
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
 
 
-            // Extra Room Configuration
             mExtraConfiguration = EditorGUILayout.Foldout(mExtraConfiguration, "Raw Configuration Details");
             EditorGUI.indentLevel++;
             using (var extraConfigGroup = new EditorGUILayout.FadeGroupScope(Convert.ToSingle(mExtraConfiguration)))

@@ -15,7 +15,6 @@ namespace mtion.room.sdk.compiled
         {
             var output = new Dictionary<MTIONSDKAssetBase, List<string>>();
 
-            // Check all the assets
             var assets = GameObject.FindObjectsOfType<MTIONSDKAssetBase>();
             foreach (var asset in assets)
             {
@@ -31,30 +30,18 @@ namespace mtion.room.sdk.compiled
                     output[asset].Add("Description");
                 }
 
-                if (asset.ObjectReference == null)
+                if (asset.ObjectReferenceProp == null)
                 {
                     output[asset].Add("Object Reference");
                 }
             }
 
-            // Check all scene objects
-            var sceneObjects = GameObject.FindObjectsOfType<MTIONSDKDescriptorSceneBase>();
-            foreach (var sceneObject in sceneObjects)
-            {
-                if (sceneObject.SDKRoot == null)
-                {
-                    output[sceneObject].Add("SDK Root");
-                }
-            }
-
-            // Check the room object
             var room = GameObject.FindObjectOfType<MTIONSDKRoom>();
             if (room != null && string.IsNullOrEmpty(room.EnvironmentInternalID))
             {
                 output[room].Add("Environment Internal ID");
             }
 
-            // Clear any empty entries
             foreach (var entry in output.Keys.ToList())
             {
                 if (output[entry].Count == 0)
@@ -70,14 +57,13 @@ namespace mtion.room.sdk.compiled
         {
             var output = new List<MTIONSDKAssetBase>();
 
-            // Check all sdk assets
             var assets = GameObject.FindObjectsOfType<MTIONSDKAssetBase>();
             foreach (var asset in assets)
             {
                 if (asset.ObjectType != MTIONObjectType.MTIONSDK_ASSET) continue;
 
-                if (asset.ObjectReference != null && 
-                    asset.ObjectReference.GetComponentInChildren<Collider>() == null) 
+                if (asset.ObjectReferenceProp != null && 
+                    asset.ObjectReferenceProp.GetComponentInChildren<Collider>() == null) 
                 {
                     output.Add(asset);
                 }
@@ -119,7 +105,7 @@ namespace mtion.room.sdk.compiled
             return output;
         }
 
-        public static void VerifyAllComponentsIntegrity(MTIONSDKDescriptorSceneBase roomSDKDescriptorObject,
+        public static void VerifyAllComponentsIntegrity(MTIONSDKRoom roomSDKDescriptorObject,
             MTIONObjectType sdkType)
         {
             VirtualComponentTracker[] components;
@@ -135,7 +121,6 @@ namespace mtion.room.sdk.compiled
                     components = GameObject.FindObjectsOfType<MVirtualLightingTracker>();
                     break;
                 case MTIONObjectType.MTIONSDK_ASSET:
-                    // Special case
                     VerifyAllAssetsIntegrity(roomSDKDescriptorObject);
                     return;
                 default:
@@ -145,7 +130,6 @@ namespace mtion.room.sdk.compiled
             HashSet<string> usedGuids = new HashSet<string>();
             foreach (var component in components)
             {
-                // Force all SDK Components to be child of SDK Props
                 if (component.transform.parent != roomSDKDescriptorObject.SDKRoot.transform)
                 {
                     component.transform.parent = roomSDKDescriptorObject.SDKRoot.transform;
@@ -160,7 +144,7 @@ namespace mtion.room.sdk.compiled
             }
         }
 
-        private static void VerifyAllAssetsIntegrity(MTIONSDKDescriptorSceneBase roomSDKDescriptorObject)
+        private static void VerifyAllAssetsIntegrity(MTIONSDKRoom roomSDKDescriptorObject)
         {
             var virtualAssetsPass1 = GameObject.FindObjectsOfType<MVirtualAssetTracker>();
             for (int i = 0; i < virtualAssetsPass1.Length; ++i)
@@ -186,16 +170,13 @@ namespace mtion.room.sdk.compiled
             }
         }
 
-        private static void WrapAsset(MVirtualAssetTracker asset,
-            MTIONSDKDescriptorSceneBase roomSDKDescriptorObject)
+        private static void WrapAsset(MVirtualAssetTracker asset, MTIONSDKRoom roomSDKDescriptorObject)
         {
-            // Ensure that asset is wrapped
             var componentCount = asset.GetComponents<MonoBehaviour>().Length;
             var meshCount = asset.GetComponents<MeshRenderer>().Length;
 
             if (componentCount != 2 || meshCount > 0)
             {
-                // Move to container
                 GameObject go = new GameObject(asset.gameObject.name);
                 go.transform.parent = roomSDKDescriptorObject.SDKRoot.transform;
                 go.AddComponent<CustomPropertiesContainer>();
@@ -205,7 +186,6 @@ namespace mtion.room.sdk.compiled
                 tracker.ExportGLTFEnabled = asset.ExportGLTFEnabled;
                 tracker.AssetParams = asset.AssetParams;
 
-                // remove component
                 GameObject assetGo = asset.gameObject;
                 go.transform.position = assetGo.transform.position;
                 go.transform.rotation = assetGo.transform.rotation;
@@ -218,7 +198,6 @@ namespace mtion.room.sdk.compiled
                 asset = tracker;
             }
 
-            // Force all SDK Components to be child of SDK Props
             if (asset.transform.parent != roomSDKDescriptorObject.SDKRoot.transform)
             {
                 asset.transform.parent = roomSDKDescriptorObject.SDKRoot.transform;
@@ -261,19 +240,19 @@ namespace mtion.room.sdk.compiled
         public static void CollectAssetCustomProperties(MTIONSDKAssetBase asset)
         {
             if (asset == null ||
-                asset.ObjectReference == null)
+                asset.ObjectReferenceProp == null)
             {
                 return;
             }
 
-            var customPropsContainer = asset.ObjectReference.GetComponent<CustomPropertiesContainer>();
+            var customPropsContainer = asset.ObjectReferenceProp.GetComponent<CustomPropertiesContainer>();
             if (customPropsContainer == null)
             {
-                customPropsContainer = asset.ObjectReference.AddComponent<CustomPropertiesContainer>();
+                customPropsContainer = asset.ObjectReferenceProp.AddComponent<CustomPropertiesContainer>();
             }
             customPropsContainer.ClearProperties();
 
-            var components = asset.ObjectReference.GetComponentsInChildren<Component>();
+            var components = asset.ObjectReferenceProp.GetComponentsInChildren<Component>();
             foreach (var component in components)
             {
                 if (component == null)
@@ -364,7 +343,7 @@ namespace mtion.room.sdk.compiled
             Transform transform)
         {
             var output = new List<int>();
-            while (transform != assetBase.ObjectReference.transform)
+            while (transform != assetBase.ObjectReferenceProp.transform)
             {
                 output.Insert(0, transform.GetSiblingIndex());
                 transform = transform.parent;

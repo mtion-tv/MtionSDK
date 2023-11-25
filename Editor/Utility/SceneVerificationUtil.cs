@@ -1,3 +1,4 @@
+using mtion.room.sdk.action;
 using mtion.room.sdk.compiled;
 using mtion.room.sdk.customproperties;
 using System.Collections;
@@ -77,6 +78,23 @@ namespace mtion.room.sdk
 
                     namesFound.Add(customProp.PropertyName);
                 }    
+            }
+
+            return output;
+        }
+
+        public static Dictionary<UnityEventAction, List<string>> GetGameObjectsWithInvalidUnityEventActions()
+        {
+            var output = new Dictionary<UnityEventAction, List<string>>();
+
+            var unityEventActionObjects = GameObject.FindObjectsOfType<UnityEventAction>();
+            foreach (var action in unityEventActionObjects)
+            {
+                var nonUnityEventTargets = action.GetNonUnityEventTargets();
+                if (nonUnityEventTargets.Count > 0)
+                {
+                    output[action] = nonUnityEventTargets;
+                }
             }
 
             return output;

@@ -18,7 +18,7 @@ namespace mtion.room.sdk
                 assetBase.CreateTimeMS = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             }
 
-            if (!string.IsNullOrEmpty(name))
+            if (!string.IsNullOrEmpty(name) && string.IsNullOrEmpty(assetBase.Name))
             {
                 assetBase.Name = name;
                 assetBase.gameObject.name = name;
@@ -43,27 +43,6 @@ namespace mtion.room.sdk
             {
                 virtualComponent.GenerateNewGUID();
             }
-        }
-
-        public static string ConvertObjectTypeToString(MTIONObjectType objectType)
-        {
-            switch (objectType)
-            {
-                case MTIONObjectType.MTIONSDK_ROOM:
-                    return "Room";
-                case MTIONObjectType.MTIONSDK_ENVIRONMENT:
-                    return "Environment";
-                case MTIONObjectType.MTIONSDK_ASSET:
-                    return "Asset";
-                case MTIONObjectType.MTIONSDK_DISPLAY:
-                    return "Display";
-                case MTIONObjectType.MTIONSDK_CAMERA:
-                    return "Camera";
-                case MTIONObjectType.MTIONSDK_LIGHT:
-                    return "Light";
-            }
-
-            return string.Empty;
         }
     }
 }

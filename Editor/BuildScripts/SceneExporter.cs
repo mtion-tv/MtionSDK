@@ -1,10 +1,8 @@
 using mtion.room.sdk.compiled;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using UnityEditor;
 using UnityEngine;
 
 namespace mtion.room.sdk
@@ -31,6 +29,8 @@ namespace mtion.room.sdk
                 throw new ArgumentNullException();
             }
 
+            sceneObjectDescriptor.TemporaryHideGizmosForBuild();
+
             MTIONObjectType objectType = sceneObjectDescriptor.ObjectType;
             switch (objectType)
             {
@@ -52,10 +52,8 @@ namespace mtion.room.sdk
         {
             SceneVerificationUtil.VerifySceneIntegrity(sceneObjectDescriptor);
 
-            // Export Asset Scene
             ExportVirtualAssetData(sceneObjectDescriptor);
 
-            // Create asset output directory
             var myDocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
             var assetOutputDirectory = Path.Combine(myDocumentsPath, "MTIONAssets");
             if (!Directory.Exists(assetOutputDirectory))
@@ -63,28 +61,25 @@ namespace mtion.room.sdk
                 Directory.CreateDirectory(assetOutputDirectory);
             }
 
-            // Create asset file
             var assetFile = Path.Combine(assetOutputDirectory, $"{sceneObjectDescriptor.Name}.mtion");
             if (File.Exists(assetFile))
             {
                 File.Delete(assetFile);
             }
 
-            // Export as archive file
             var basePresistentDirector = SDKUtil.GetSDKItemDirectory(sceneObjectDescriptor, LocationOptions);
             ZipFile.CreateFromDirectory(basePresistentDirector, assetFile, System.IO.Compression.CompressionLevel.Optimal, true);
         }
-
-
+        
         private void ExportRoomScene()
         {
-            // Prepare scene for export
-            ComponentVerificationUtil.VerifyAllComponentsIntegrity(sceneObjectDescriptor, MTIONObjectType.MTIONSDK_CAMERA);
-            ComponentVerificationUtil.VerifyAllComponentsIntegrity(sceneObjectDescriptor, MTIONObjectType.MTIONSDK_DISPLAY);
-            ComponentVerificationUtil.VerifyAllComponentsIntegrity(sceneObjectDescriptor, MTIONObjectType.MTIONSDK_LIGHT);
-            ComponentVerificationUtil.VerifyAllComponentsIntegrity(sceneObjectDescriptor, MTIONObjectType.MTIONSDK_ASSET);
+            MTIONSDKRoom roomDescriptor = sceneObjectDescriptor as MTIONSDKRoom;
+            
+            ComponentVerificationUtil.VerifyAllComponentsIntegrity(roomDescriptor, MTIONObjectType.MTIONSDK_CAMERA);
+            ComponentVerificationUtil.VerifyAllComponentsIntegrity(roomDescriptor, MTIONObjectType.MTIONSDK_DISPLAY);
+            ComponentVerificationUtil.VerifyAllComponentsIntegrity(roomDescriptor, MTIONObjectType.MTIONSDK_LIGHT);
+            ComponentVerificationUtil.VerifyAllComponentsIntegrity(roomDescriptor, MTIONObjectType.MTIONSDK_ASSET);
 
-            // Find All SDK Components
             MVirtualCameraEventTracker[] cameraTrackers = GameObject.FindObjectsOfType<MVirtualCameraEventTracker>();
             MVirtualDisplayTracker[] displayTrackers = GameObject.FindObjectsOfType<MVirtualDisplayTracker>();
             MVirtualAssetTracker[] assetTrackers = GameObject.FindObjectsOfType<MVirtualAssetTracker>();
@@ -92,15 +87,11 @@ namespace mtion.room.sdk
 
             VerifyAndSaveSDKComponents(cameraTrackers, displayTrackers, lightTrackers, assetTrackers);
 
-            //////////////////////////////
-            // Export Main Room Scene
             exportPercentComplete = 0.0f;
 
             ExportRoomSceneData(sceneObjectDescriptor);
             exportPercentComplete += 0.3f;
 
-            //////////////////////////////
-            // Export Virtual Assets in Scene
 
             var allAssets = GameObject.FindObjectsOfType<MVirtualAssetTracker>();
             var assetGuidsToExport = AssetComparisonUtil.FilterDuplicateAssets(allAssets, sceneObjectDescriptor.LocationOption)
@@ -122,20 +113,15 @@ namespace mtion.room.sdk
 
         private void ExportEnvironmentScene()
         {
-            //////////////////////////////
-            // Export Main Room Scene (ordering important)
             exportPercentComplete = 0.5f;
 
-            // 1. Export all lightmap data and store as assets in file system. 
             ExportLightingData(() =>
             {
-                // 2. Export all scene data
                 ExportEnvironmentSceneData(sceneObjectDescriptor);
                 exportPercentComplete = 1.0f;
             });
 
 
-            // Export all lighting data associated with the scene
             void ExportLightingData(Action onComplete)
             {
                 Lightmapper lightmapper = Lightmapper.UnityLightmapper;
@@ -153,15 +139,22 @@ namespace mtion.room.sdk
 
             try
             {
-                // TODO: Enhance screenshot (make more aesthetically pleasing)
-                // Take camera snapshot
                 var camera = sceneObjectDescriptor.gameObject.GetComponentInChildren<Camera>();
                 var basePersistentDirectory = SDKUtil.GetSDKItemDirectory(sceneBase, sceneBase.LocationOption);
                 ThumbnailGenerator.TakeSnapshotOfAssetInCurrentScene(camera, basePersistentDirectory);
 
                 var addressablesExporter = new AssetExporter(sceneBase, sceneBase.LocationOption);
+                
+                string guid = sceneBase.GUID;
+                
                 addressablesExporter.ExportSDKAsset();
 
+                if (sceneBase == null)
+                {
+                    sceneBase = GameObject.FindObjectsOfType<MTIONSDKDescriptorSceneBase>()
+                        .Where(descriptor => descriptor.GUID == guid).First();
+                }
+                
                 CreateDescriptorFile(sceneBase);
 
                 MVirtualCameraEventTracker[] cameraTrackers = GameObject.FindObjectsOfType<MVirtualCameraEventTracker>();
@@ -196,14 +189,21 @@ namespace mtion.room.sdk
 
             try
             {
-                // TODO: Enhance screenshot (make more aesthetically pleasing)
-                //Take camera snapshot
                 var camera = sceneObjectDescriptor.gameObject.GetComponentInChildren<Camera>();
                 string basePersistentDirectory = SDKUtil.GetSDKItemDirectory(sceneBase, sceneBase.LocationOption);
                 ThumbnailGenerator.TakeSnapshotOfAssetInCurrentScene(camera, basePersistentDirectory);
 
                 var addressablesExporter = new AssetExporter(sceneBase, sceneBase.LocationOption);
+                
+                string guid = sceneBase.GUID;
+                
                 addressablesExporter.ExportSDKAsset();
+
+                if (sceneBase == null)
+                {
+                    sceneBase = GameObject.FindObjectsOfType<MTIONSDKDescriptorSceneBase>()
+                        .Where(descriptor => descriptor.GUID == guid).First();
+                }
 
                 CreateDescriptorFile(sceneBase);
                 string configData = ConfigurationGenerator.ConvertSDKSceneToJsonString(
@@ -235,20 +235,28 @@ namespace mtion.room.sdk
 
             try
             {
-                // Generate a thumbnail for the asset
                 sceneObjectDescriptor = BuildManager.Instance.SceneDescriptorObject.GetComponent<MTIONSDKDescriptorSceneBase>();
                 var basePersistentDirectory = SDKUtil.GetSDKItemDirectory(assetBase, LocationOptions);
                 var camera = sceneObjectDescriptor.gameObject.GetComponentInChildren<Camera>();
                 ThumbnailGenerator.TakeSnapshotOfAssetInCurrentScene(camera, basePersistentDirectory);
 
+                Type assetBaseType = assetBase.GetType();
+                
                 var addressablesExporter = new AssetExporter(assetBase, LocationOptions);
                 addressablesExporter.ExportSDKAsset();
 
-                // Build process destroys and reloads scene, lossing all references to existing scene-tied GameObjects
                 if (assetBase == null)
                 {
-                    assetBase = GameObject.FindObjectsOfType<MVirtualAssetTracker>()
-                   .Where(tracker => tracker.GUID == guid).First();
+                    if (assetBaseType == typeof(MVirtualAssetTracker))
+                    {
+                        assetBase = GameObject.FindObjectsOfType<MVirtualAssetTracker>()
+                            .Where(tracker => tracker.GUID == guid).First();
+                    }
+                    else
+                    {
+                        assetBase = GameObject.FindObjectsOfType<MTIONSDKAssetBase>()
+                            .Where(tracker => tracker.GUID == guid).First();
+                    }
                 }
 
                 CreateDescriptorFile(assetBase);
@@ -310,7 +318,6 @@ namespace mtion.room.sdk
             {
                 foreach (var component in componentTrackers)
                 {
-                    // These should be resolved in PackageInitialization migration script. Assert correctness
                     Debug.Assert(component != null);
                     Debug.Assert(component.GUID != null);
                 }

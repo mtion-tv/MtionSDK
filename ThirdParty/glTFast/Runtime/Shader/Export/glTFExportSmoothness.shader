@@ -1,4 +1,4 @@
-﻿Shader "Hidden/glTFExportSmoothness"
+Shader "Hidden/glTFExportSmoothness"
 {
 	Properties
 	{
@@ -6,7 +6,6 @@
 	}
 	SubShader
 	{
-		// No culling or depth
 		Cull Off ZWrite Off ZTest Always
 		ColorMask G
  

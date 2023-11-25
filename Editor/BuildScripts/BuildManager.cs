@@ -7,16 +7,12 @@ using UnityEditor.AddressableAssets;
 using System;
 using mtion.room.sdk.compiled;
 
-// NOTE: See https://github.dev/kuler90/build-unity/blob/master/src/build.js for details around setting up expanded build settings
 
 
 namespace mtion.room.sdk
 {
     public class BuildManager
     {
-        ////////////////////////////////////////////////////////////////////////////////////////
-        ///  PUBLIC CLI BUILDSYSTEM
-        ////////////////////////////////////////////////////////////////////////////////////////
 
         public static void BuildApplicationAssetBundlesCLI()
         {
@@ -28,9 +24,6 @@ namespace mtion.room.sdk
         }
 
 
-        ////////////////////////////////////////////////////////////////////////////////////////
-        ///  PUBLIC STATIC API
-        ////////////////////////////////////////////////////////////////////////////////////////
         public static bool IsSceneValid()
         {
             return BuildManager.Instance.SceneContainsValidSDK;
@@ -57,7 +50,6 @@ namespace mtion.room.sdk
         }
 
 
-        // SDK USER AUTH
 
         public static bool SERVER_HTTPS = true;
         public static string SERVER_KEY = null;
@@ -71,9 +63,6 @@ namespace mtion.room.sdk
 
 
 
-        ////////////////////////////////////////////////////////////////////////////////////////
-        /// SINGLETON ACCESS 
-        ////////////////////////////////////////////////////////////////////////////////////////
         private static readonly Lazy<BuildManager> lazy = new Lazy<BuildManager>(() => new BuildManager());
         public static BuildManager Instance
         {
@@ -83,9 +72,6 @@ namespace mtion.room.sdk
             }
         }
 
-        ////////////////////////////////////////////////////////////////////////////////////////
-        ///  PROPS
-        ////////////////////////////////////////////////////////////////////////////////////////
 
         public bool SceneContainsValidSDK { get => GetMTIONSDKDescriptor() != null; }
         public GameObject SceneDescriptorObject { get => GetMTIONSDKDescriptor(); }
@@ -128,23 +114,13 @@ namespace mtion.room.sdk
         }
 
 
-        ////////////////////////////////////////////////////////////////////////////////////////
-        ///  VARS
-        ////////////////////////////////////////////////////////////////////////////////////////
 
         private SceneExporter sceneExporter;
         private bool exportTaskRunning = false;
 
-        ////////////////////////////////////////////////////////////////////
-        /// USER AUTH
-        /// TODO: https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/CognitoIdentity.html#getId-property
-        ////////////////////////////////////////////////////////////////////
         private UserSdkAuthentication userAuthentication = null;
 
 
-        /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        /// PRIVATE API
-        /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         private void BuildApplicationAssetBundle()
         {
@@ -155,7 +131,6 @@ namespace mtion.room.sdk
 
         private void BuildAndExportSdkScene()
         {
-            // Check for valid scene descriptor
             var sdkDescriptor = GetMTIONSDKDescriptor();
             if (sdkDescriptor == null)
             {
@@ -163,9 +138,8 @@ namespace mtion.room.sdk
             }
 
             var sceneObjectDescriptor = sdkDescriptor.GetComponent<MTIONSDKDescriptorSceneBase>();
-            var roomObject = sceneObjectDescriptor.ObjectReference;
+            var roomObject = sceneObjectDescriptor.ObjectReferenceProp;
 
-            // Export room and generate Prefab and glb
             if (roomObject.transform.position == Vector3.zero &&
                 roomObject.transform.rotation == Quaternion.identity &&
                 roomObject.transform.localScale == Vector3.one)

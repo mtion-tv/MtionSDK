@@ -1,19 +1,4 @@
-// Copyright 2020 Andreas Atteneder
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
 
-// Based on Unity built-in shader source. Copyright (c) 2016 Unity Technologies. MIT license (see license.txt)
 
 
 #ifndef UNITY_STANDARD_CORE_FORWARD_SIMPLE_INCLUDED
@@ -21,7 +6,6 @@
 
 #include "glTFUnityStandardCore.cginc"
 
-//  Does not support: _PARALLAXMAP, DIRLIGHTMAP_COMBINED
 #define GLOSSMAP (defined(_SPECGLOSSMAP) || defined(_METALLICGLOSSMAP))
 
 #ifndef SPECULAR_HIGHLIGHTS
@@ -62,7 +46,6 @@ struct VertexOutputBaseSimple
     UNITY_VERTEX_OUTPUT_STEREO
 };
 
-// UNIFORM_REFLECTIVITY(): workaround to get (uniform) reflecivity based on UNITY_SETUP_BRDF_INPUT
 half MetallicSetup_Reflectivity()
 {
     return 1.0h - OneMinusReflectivityFromMetallic(metallicFactor);
@@ -87,7 +70,6 @@ half RoughnessSetup_Reflectivity()
 
 half3 TransformToTangentSpace(half3 tangent, half3 binormal, half3 normal, half3 v)
 {
-    // Mali400 shader compiler prefers explicit dot product over using a half3x3 matrix
     return half3(dot(tangent, v), dot(binormal, v), dot(normal, v));
 }
 
@@ -137,7 +119,6 @@ VertexOutputBaseSimple vertForwardBaseSimple (VertexInput v)
         #endif
     #endif
 
-    //We need this for shadow receiving
     TRANSFER_SHADOW(o);
 
     o.ambientOrLightmapUV = VertexGIForward(v, posWorld, normalWorld);
@@ -169,7 +150,6 @@ FragmentCommonData FragmentSetupSimple(VertexOutputBaseSimple i)
     FragmentCommonData s = UNITY_SETUP_BRDF_INPUT (i.tex,i.color);
 #endif
     
-    // NOTE: shader relies on pre-multiply alpha-blend (_SrcBlend = One, _DstBlend = OneMinusSrcAlpha)
     s.diffColor = PreMultiplyAlpha (s.diffColor, alpha, s.oneMinusReflectivity, /*out*/ s.alpha);
 
     s.normalWorld = i.normalWorld.xyz;
@@ -246,7 +226,6 @@ half4 fragForwardBaseSimpleInternal (VertexOutputBaseSimple i)
     half ndotl = saturate(dot(s.normalWorld, mainLight.dir));
     #endif
 
-    //we can't have worldpos here (not enough interpolator on SM 2.0) so no shadow fade in that case.
     half shadowMaskAttenuation = UnitySampleBakedOcclusion(i.ambientOrLightmapUV, 0);
     half realtimeShadowAttenuation = SHADOW_ATTENUATION(i);
     half atten = UnityMixRealtimeAndBakedShadows(realtimeShadowAttenuation, shadowMaskAttenuation, 0);
@@ -324,7 +303,6 @@ VertexOutputForwardAddSimple vertForwardAddSimple (VertexInput v)
     o.tex = TexCoords(v);
     o.posWorld = posWorld.xyz;
 
-    //We need this for shadow receiving and lighting
     UNITY_TRANSFER_LIGHTING(o, v.uv1);
 
     half3 lightDir = _WorldSpaceLightPos0.xyz - posWorld.xyz * _WorldSpaceLightPos0.w;
@@ -371,7 +349,6 @@ FragmentCommonData FragmentSetupSimpleAdd(VertexOutputForwardAddSimple i)
     FragmentCommonData s = UNITY_SETUP_BRDF_INPUT (i.tex,i.color);
 #endif
 
-    // NOTE: shader relies on pre-multiply alpha-blend (_SrcBlend = One, _DstBlend = OneMinusSrcAlpha)
     s.diffColor = PreMultiplyAlpha (s.diffColor, alpha, s.oneMinusReflectivity, /*out*/ s.alpha);
 
     s.eyeVec = 0;

@@ -9,14 +9,14 @@ _Build, create, and publish customized clubhouses, assets and experiences._
 1. Open package manager inside Unity
 2. Click "+" button
 3. Click "Add package from Git URL"
-4. Paste in `https://github.com/mtion-tv/MtionSDK`
+4. Paste in `https://github.com/mtion-tv/MtionSDK.git`
 
 OR
 
 Open the `manifest.json` file inside of the `Packages` folder in root Unity project. Then paste in below to add package
 
 ```
-"com.mtion.sdk": "https://github.com/mtion-tv/MtionSDK",
+"com.mtion.sdk": "https://github.com/mtion-tv/MtionSDK.git",
 ```
 
 ## Refreshing Package
@@ -26,4 +26,4 @@ New files will be loaded.
 
 ## Documentation
 
-TBD
+https://docs.mtion.xyz/mtion/mtion-sdk/mtion-sdk-documentation

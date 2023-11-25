@@ -1,12 +1,8 @@
-// Upgrade NOTE: replaced 'UNITY_INSTANCE_ID' with 'UNITY_VERTEX_INPUT_INSTANCE_ID'
 
-// Unity built-in shader source. Copyright (c) 2016 Unity Technologies. MIT license (see license.txt)
 
 #ifndef UNITY_STANDARD_SHADOW_INCLUDED
 #define UNITY_STANDARD_SHADOW_INCLUDED
 
-// NOTE: had to split shadow functions into separate file,
-// otherwise compiler gives trouble with LIGHTING_COORDS macro (in UnityStandardCore.cginc)
 
 
 #include "UnityCG.cginc"
@@ -17,12 +13,10 @@
 	#define UNITY_STANDARD_USE_DITHER_MASK 1
 #endif
 
-// Need to output UVs in shadow caster, since we need to sample texture and do clip/dithering based on it
 #if defined(_ALPHATEST_ON) || defined(_ALPHABLEND_ON) || defined(_ALPHAPREMULTIPLY_ON)
 #define UNITY_STANDARD_USE_SHADOW_UVS 1
 #endif
 
-// Has a non-empty shadow caster output struct (it's an error to have empty structs on some platforms...)
 #if !defined(V2F_SHADOW_CASTER_NOPOS_IS_EMPTY) || defined(UNITY_STANDARD_USE_SHADOW_UVS)
 #define UNITY_STANDARD_USE_SHADOW_OUTPUT_STRUCT 1
 #endif
@@ -40,7 +34,6 @@ float4	  _MainTex_ST;
 sampler3D   _DitherMaskLOD;
 #endif
 
-// Handle PremultipliedAlpha from Fade or Transparent shading mode
 half4	   _SpecColor;
 half		_Metallic;
 #ifdef _SPECGLOSSMAP
@@ -73,7 +66,6 @@ half SpecularSetup_ShadowGetOneMinusReflectivity(half2 uv)
 	return (1 - SpecularStrength(specColor));
 }
 
-// SHADOW_ONEMINUSREFLECTIVITY(): workaround to get one minus reflectivity based on UNITY_SETUP_BRDF_INPUT
 #define SHADOW_JOIN2(a, b) a##b
 #define SHADOW_JOIN(a, b) SHADOW_JOIN2(a,b)
 #define SHADOW_ONEMINUSREFLECTIVITY SHADOW_JOIN(UNITY_SETUP_BRDF_INPUT, _ShadowGetOneMinusReflectivity)
@@ -114,9 +106,6 @@ struct VertexOutputStereoShadowCaster
 };
 #endif
 
-// We have to do these dances of outputting SV_POSITION separately from the vertex shader,
-// and inputting VPOS in the pixel shader, since they both map to "POSITION" semantic on
-// some platforms, and then things don't go well.
 
 
 void vertShadowCaster (VertexInput v,
@@ -157,7 +146,6 @@ half4 fragShadowCaster (
 {
 	#if defined(UNITY_STANDARD_USE_SHADOW_UVS)
 		#if defined(_PARALLAXMAP) && (SHADER_TARGET >= 30)
-			//On d3d9 parallax can also be disabled on the fwd pass when too many	sampler are used. See EXCEEDS_D3D9_SM3_MAX_SAMPLER_COUNT. Ideally we should account for that here as well.
 			half3 viewDirForParallax = normalize( half3(i.tangentToWorldAndParallax[0].w,i.tangentToWorldAndParallax[1].w,i.tangentToWorldAndParallax[2].w) );
 			fixed h = tex2D (_ParallaxMap, i.tex.xy).g;
 			half2 offset = ParallaxOffset1Step (h, _Parallax, viewDirForParallax);
@@ -175,8 +163,6 @@ half4 fragShadowCaster (
 				alpha = outModifiedAlpha;
 			#endif
 			#if defined(UNITY_STANDARD_USE_DITHER_MASK)
-				// Use dither mask for alpha blended shadows, based on pixel position xy
-				// and alpha level. Our dither texture is 4x4x16.
 				half alphaRef = tex3D(_DitherMaskLOD, float3(vpos.xy*0.25,alpha*0.9375)).a;
 				clip (alphaRef - 0.01);
 			#else

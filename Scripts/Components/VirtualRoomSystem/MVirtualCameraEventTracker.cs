@@ -22,7 +22,6 @@ namespace mtion.room.sdk
                 return 1;
             }
 
-            // Equal
             return 0;
         }
     }

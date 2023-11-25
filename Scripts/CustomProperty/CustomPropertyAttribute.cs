@@ -7,14 +7,12 @@ namespace mtion.room.sdk.action
 {
     public class CustomPropertyAttribute : Attribute
     {
-        // generic
 
         public CustomPropertyAttribute()
         {
 
         }
 
-        // bool
 
         public bool BoolDefaultValue { get; } = false;
 
@@ -23,7 +21,6 @@ namespace mtion.room.sdk.action
             BoolDefaultValue = defaultValue;
         }
 
-        // int
 
         public int IntDefaultValue { get; } = 0;
         public int IntMinValue { get; } = int.MinValue;
@@ -36,7 +33,6 @@ namespace mtion.room.sdk.action
             IntMaxValue = max;
         }
 
-        // float
 
         public float FloatDefaultValue { get; } = 0f;
         public float FloatMinValue { get; } = float.MinValue;
@@ -49,7 +45,6 @@ namespace mtion.room.sdk.action
             FloatMaxValue = max;
         }
 
-        // string
 
         public string StringDefaultValue { get; } = "";
 
@@ -58,7 +53,6 @@ namespace mtion.room.sdk.action
             StringDefaultValue = defaultValue;
         }
 
-        // list
 
         public int ListDefaultLength { get; } = 1;
         public bool ListFixedLength { get; } = false;

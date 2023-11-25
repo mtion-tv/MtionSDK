@@ -1,4 +1,3 @@
-// Unity built-in shader source. Copyright (c) 2016 Unity Technologies. MIT license (see license.txt)
 
 Shader "GLTF/PbrSpecularGlossiness"
 {
@@ -42,7 +41,6 @@ Shader "GLTF/PbrSpecularGlossiness"
 		[HideInInspector]  _UVSec ("UV Set for secondary textures", Float) = 0
 
 
-		// Blending state
 		[HideInInspector] _Mode ("__mode", Float) = 0.0
 		[HideInInspector] _SrcBlend ("__src", Float) = 1.0
 		[HideInInspector] _DstBlend ("__dst", Float) = 0.0
@@ -59,8 +57,6 @@ Shader "GLTF/PbrSpecularGlossiness"
 		LOD 300
 		
 
-		// ------------------------------------------------------------------
-		//  Base forward pass (directional light, emission, lightmaps, ...)
 		Pass
 		{
 			Name "FORWARD" 
@@ -74,7 +70,6 @@ Shader "GLTF/PbrSpecularGlossiness"
 			CGPROGRAM
 			#pragma target 3.0
 
-			// -------------------------------------
 
 			#pragma shader_feature _NORMALMAP
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
@@ -97,8 +92,6 @@ Shader "GLTF/PbrSpecularGlossiness"
 
 			ENDCG
 		}
-		// ------------------------------------------------------------------
-		//  Additive forward pass (one light per pass)
 		Pass
 		{
 			Name "FORWARD_DELTA"
@@ -112,7 +105,6 @@ Shader "GLTF/PbrSpecularGlossiness"
 			CGPROGRAM
 			#pragma target 3.0
 
-			// -------------------------------------
 
 			#pragma shader_feature _NORMALMAP
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
@@ -132,8 +124,6 @@ Shader "GLTF/PbrSpecularGlossiness"
 
 			ENDCG
 		}
-		// ------------------------------------------------------------------
-		//  Shadow rendering pass
 		Pass {
 			Name "ShadowCaster"
 			Tags { "LightMode" = "ShadowCaster" }
@@ -144,7 +134,6 @@ Shader "GLTF/PbrSpecularGlossiness"
 			CGPROGRAM
 			#pragma target 3.0
 
-			// -------------------------------------
 
 
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
@@ -160,8 +149,6 @@ Shader "GLTF/PbrSpecularGlossiness"
 
 			ENDCG
 		}
-		// ------------------------------------------------------------------
-		//  Deferred pass
 		Pass
 		{
 			Name "DEFERRED"
@@ -173,7 +160,6 @@ Shader "GLTF/PbrSpecularGlossiness"
 			#pragma exclude_renderers nomrt
 
 
-			// -------------------------------------
 
 			#pragma shader_feature _NORMALMAP
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
@@ -195,9 +181,6 @@ Shader "GLTF/PbrSpecularGlossiness"
 			ENDCG
 		}
 
-		// ------------------------------------------------------------------
-		// Extracts information for lightmapping, GI (emission, albedo, ...)
-		// This pass it not used during regular rendering.
 		Pass
 		{
 			Name "META" 
@@ -225,8 +208,6 @@ Shader "GLTF/PbrSpecularGlossiness"
 		Tags { "RenderType"="Opaque" "PerformanceChecks"="False" }
 		LOD 150
 
-		// ------------------------------------------------------------------
-		//  Base forward pass (directional light, emission, lightmaps, ...)
 		Pass
 		{
 			Name "FORWARD" 
@@ -247,7 +228,6 @@ Shader "GLTF/PbrSpecularGlossiness"
 			#pragma shader_feature _ _SPECULARHIGHLIGHTS_OFF
 			#pragma shader_feature _ _GLOSSYREFLECTIONS_OFF
 			#pragma shader_feature ___ _DETAIL_MULX2
-			// SM2.0: NOT SUPPORTED shader_feature _PARALLAXMAP
 
 			#pragma skip_variants SHADOWS_SOFT DYNAMICLIGHTMAP_ON DIRLIGHTMAP_COMBINED
 			
@@ -262,8 +242,6 @@ Shader "GLTF/PbrSpecularGlossiness"
 			ENDCG
 		}
 
-		// ------------------------------------------------------------------
-		//  Additive forward pass (one light per pass)
 		Pass
 		{
 			Name "FORWARD_DELTA"
@@ -283,7 +261,6 @@ Shader "GLTF/PbrSpecularGlossiness"
 			#pragma shader_feature _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
 			#pragma shader_feature _ _SPECULARHIGHLIGHTS_OFF
 			#pragma shader_feature ___ _DETAIL_MULX2
-			// SM2.0: NOT SUPPORTED shader_feature _PARALLAXMAP
 			#pragma skip_variants SHADOWS_SOFT
 			
 			#pragma multi_compile_fwdadd_fullshadows
@@ -296,8 +273,6 @@ Shader "GLTF/PbrSpecularGlossiness"
 
 			ENDCG
 		}
-		// ------------------------------------------------------------------
-		//  Shadow rendering pass
 		Pass {
 			Name "ShadowCaster"
 			Tags { "LightMode" = "ShadowCaster" }
@@ -320,9 +295,6 @@ Shader "GLTF/PbrSpecularGlossiness"
 
 			ENDCG
 		}
-		// ------------------------------------------------------------------
-		// Extracts information for lightmapping, GI (emission, albedo, ...)
-		// This pass it not used during regular rendering.
 		Pass
 		{
 			Name "META" 

@@ -1,19 +1,4 @@
-// Copyright 2020 Andreas Atteneder
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
 
-// Based on Unity built-in shader source. Copyright (c) 2016 Unity Technologies. MIT license (see license.txt)
 
 #ifndef UNITY_STANDARD_CORE_INCLUDED
 #define UNITY_STANDARD_CORE_INCLUDED
@@ -28,9 +13,6 @@
 #include "UnityStandardBRDF.cginc"
 
 #include "AutoLight.cginc"
-//-------------------------------------------------------------------------------------
-// counterpart for NormalizePerPixelNormal
-// skips normalization per-vertex and expects normalization to happen per-pixel
 half3 NormalizePerVertexNormal (float3 n) // takes float to avoid overflow
 {
     #if (SHADER_TARGET < 30) || UNITY_STANDARD_SIMPLE
@@ -49,7 +31,6 @@ float3 NormalizePerPixelNormal (float3 n)
     #endif
 }
 
-//-------------------------------------------------------------------------------------
 UnityLight MainLight ()
 {
     UnityLight l;
@@ -69,7 +50,6 @@ UnityLight AdditiveLight (half3 lightDir, half atten)
         l.dir = NormalizePerPixelNormal(l.dir);
     #endif
 
-    // shadow the light
     l.color *= atten;
     return l;
 }
@@ -90,16 +70,12 @@ UnityIndirect ZeroIndirect ()
     return ind;
 }
 
-//-------------------------------------------------------------------------------------
-// Common fragment setup
 
-// deprecated
 half3 WorldNormal(half4 tan2world[3])
 {
     return normalize(tan2world[2].xyz);
 }
 
-// deprecated
 #ifdef _TANGENT_TO_WORLD
     half3x3 ExtractTangentToWorldPerPixel(half4 tan2world[3])
     {
@@ -110,10 +86,8 @@ half3 WorldNormal(half4 tan2world[3])
     #if UNITY_TANGENT_ORTHONORMALIZE
         n = NormalizePerPixelNormal(n);
 
-        // ortho-normalize Tangent
         t = normalize (t - n * dot(t, n));
 
-        // recalculate Binormal
         half3 newB = cross(n, t);
         b = newB * sign (dot (newB, b));
     #endif
@@ -137,10 +111,8 @@ float3 PerPixelWorldNormal(float2 i_tex, float4 tangentToWorld[3])
     #if UNITY_TANGENT_ORTHONORMALIZE
         normal = NormalizePerPixelNormal(normal);
 
-        // ortho-normalize Tangent
         tangent = normalize (tangent - normal * dot(tangent, normal));
 
-        // recalculate Binormal
         half3 newB = cross(normal, tangent);
         binormal = newB * sign (dot (newB, binormal));
     #endif
@@ -194,8 +166,6 @@ float3 PerPixelWorldNormal(float2 i_tex, float4 tangentToWorld[3])
 struct FragmentCommonData
 {
     half3 diffColor, specColor;
-    // Note: smoothness & oneMinusReflectivity for optimization purposes, mostly for DX9 SM2.0 level.
-    // Most of the math is being done on these (1-x) values, and that saves a few precious ALU slots.
     half oneMinusReflectivity, smoothness;
     float3 normalWorld;
     float3 eyeVec;
@@ -290,7 +260,6 @@ inline FragmentCommonData MetallicSetup (
     return o;
 }
 
-// parallax transformed texcoord is used to sample occlusion
 inline FragmentCommonData FragmentSetup (
     inout float4 i_tex,
 #if defined(_METALLICGLOSSMAP) || defined(_SPECGLOSSMAP)
@@ -320,7 +289,6 @@ inline FragmentCommonData FragmentSetup (
     o.eyeVec = NormalizePerPixelNormal(i_eyeVec);
     o.posWorld = i_posWorld;
 
-    // NOTE: shader relies on pre-multiply alpha-blend (_SrcBlend = One, _DstBlend = OneMinusSrcAlpha)
     o.diffColor = PreMultiplyAlpha (o.diffColor, alpha, o.oneMinusReflectivity, /*out*/ o.alpha);
     return o;
 }
@@ -356,7 +324,6 @@ inline UnityGI FragmentGI (FragmentCommonData s, half occlusion, half4 i_ambient
     if(reflections)
     {
         Unity_GlossyEnvironmentData g = UnityGlossyEnvironmentSetup(s.smoothness, -s.eyeVec, s.normalWorld, s.specColor);
-        // Replace the reflUVW if it has been compute in Vertex shader. Note: the compiler will optimize the calcul in UnityGlossyEnvironmentSetup itself
         #if UNITY_STANDARD_SIMPLE
             g.reflUVW = s.reflUVW;
         #endif
@@ -375,7 +342,6 @@ inline UnityGI FragmentGI (FragmentCommonData s, half occlusion, half4 i_ambient
 }
 
 
-//-------------------------------------------------------------------------------------
 half4 OutputForward (half4 output, half alphaFromSurface)
 {
     #if defined(_ALPHABLEND_ON) || defined(_ALPHAPREMULTIPLY_ON)
@@ -389,14 +355,11 @@ half4 OutputForward (half4 output, half alphaFromSurface)
 inline half4 VertexGIForward(VertexInput v, float3 posWorld, half3 normalWorld)
 {
     half4 ambientOrLightmapUV = 0;
-    // Static lightmaps
     #ifdef LIGHTMAP_ON
         ambientOrLightmapUV.xy = v.uv1.xy * unity_LightmapST.xy + unity_LightmapST.zw;
         ambientOrLightmapUV.zw = 0;
-    // Sample light probe for Dynamic objects only (no static or dynamic lightmaps)
     #elif UNITY_SHOULD_SAMPLE_SH
         #ifdef VERTEXLIGHT_ON
-            // Approximated illumination from non-important point lights
             ambientOrLightmapUV.rgb = Shade4PointLights (
                 unity_4LightPosX0, unity_4LightPosY0, unity_4LightPosZ0,
                 unity_LightColor[0].rgb, unity_LightColor[1].rgb, unity_LightColor[2].rgb, unity_LightColor[3].rgb,
@@ -413,8 +376,6 @@ inline half4 VertexGIForward(VertexInput v, float3 posWorld, half3 normalWorld)
     return ambientOrLightmapUV;
 }
 
-// ------------------------------------------------------------------
-//  Base forward pass (directional light, emission, lightmaps, ...)
 
 struct VertexOutputForwardBase
 {
@@ -426,7 +387,6 @@ struct VertexOutputForwardBase
     float pointSize                       : PSIZE;
     UNITY_LIGHTING_COORDS(6,7)
 
-    // next ones would not fit into SM2.0 limits, but they are always for SM3.0+
 #if UNITY_REQUIRE_FRAG_WORLDPOS && !UNITY_PACK_WORLDPOS_WITH_TANGENT
     float3 posWorld                     : TEXCOORD8;
 #endif
@@ -494,7 +454,6 @@ VertexOutputForwardBase vertForwardBase (VertexInput v)
         o.tangentToWorldAndPackedData[2].xyz = normalWorld;
     #endif
 
-    //We need this for shadow receving
     UNITY_TRANSFER_LIGHTING(o, v.uv1);
 
     o.ambientOrLightmapUV = VertexGIForward(v, posWorld, normalWorld);
@@ -554,8 +513,6 @@ half4 fragForwardBase (VertexOutputForwardBase i) : SV_Target   // backward comp
     return fragForwardBaseInternal(i);
 }
 
-// ------------------------------------------------------------------
-//  Additive forward pass (one light per pass)
 
 struct VertexOutputForwardAdd
 {
@@ -567,7 +524,6 @@ struct VertexOutputForwardAdd
     float pointSize                     : PSIZE;
     UNITY_LIGHTING_COORDS(6, 7)
 
-    // next ones would not fit into SM2.0 limits, but they are always for SM3.0+
 #if defined(_PARALLAXMAP)
     half3 viewDirForParallax            : TEXCOORD8;
 #endif
@@ -625,7 +581,6 @@ VertexOutputForwardAdd vertForwardAdd (VertexInput v)
         o.tangentToWorldAndLightDir[1].xyz = 0;
         o.tangentToWorldAndLightDir[2].xyz = normalWorld;
     #endif
-    //We need this for shadow receiving and lighting
     UNITY_TRANSFER_LIGHTING(o, v.uv1);
 
     float3 lightDir = _WorldSpaceLightPos0.xyz - posWorld.xyz * _WorldSpaceLightPos0.w;
@@ -676,8 +631,6 @@ half4 fragForwardAdd (VertexOutputForwardAdd i) : SV_Target     // backward comp
     return fragForwardAddInternal(i);
 }
 
-// ------------------------------------------------------------------
-//  Deferred pass
 
 struct VertexOutputDeferred
 {
@@ -813,11 +766,9 @@ void fragDeferred (
     FRAGMENT_SETUP(s)
     UNITY_SETUP_INSTANCE_ID(i);
 
-    // no analytic lights in this pass
     UnityLight dummyLight = DummyLight ();
     half atten = 1;
 
-    // only GI
     half occlusion =
 #ifdef _OCCLUSION
         Occlusion(i.texORM.xy);
@@ -851,19 +802,14 @@ void fragDeferred (
 
     UnityStandardDataToGbuffer(data, outGBuffer0, outGBuffer1, outGBuffer2);
 
-    // Emissive lighting buffer
     outEmission = half4(emissiveColor, 1);
 
-    // Baked direct lighting occlusion if any
     #if defined(SHADOWS_SHADOWMASK) && (UNITY_ALLOWED_MRT_COUNT > 4)
         outShadowMask = UnityGetRawBakedOcclusions(i.ambientOrLightmapUV.xy, IN_WORLDPOS(i));
     #endif
 }
 
 
-//
-// Old FragmentGI signature. Kept only for backward compatibility and will be removed soon
-//
 
 inline UnityGI FragmentGI(
     float3 posWorld,
@@ -871,7 +817,6 @@ inline UnityGI FragmentGI(
     UnityLight light,
     bool reflections)
 {
-    // we init only fields actually used
     FragmentCommonData s = (FragmentCommonData)0;
     s.smoothness = smoothness;
     s.normalWorld = normalWorld;

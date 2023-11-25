@@ -33,21 +33,16 @@ namespace mtion.room.sdk.action
     public sealed class MActionBehaviour : MonoBehaviour, IMActionInterfaceHandler
     {
 
-//#if UNITY_EDITOR
         public string DefaultChatCommand;
-//#endif
 
-        ////////////////////////////////////////////////////////////////////////////////////////
-        ///  ACTION CONFIG
-        ////////////////////////////////////////////////////////////////////////////////////////
 
         public string ActionName;
         public string ActionDescription;
+        public bool Active = true;
 
         [HideInInspector]
         public string Guid = SDKUtil.GenerateNewGUID();
 
-        //[HideInInspector]
         public List<ActionEntryPointInternal> ActionEntryPoints = new List<ActionEntryPointInternal>();
         public List<ActionExitPointInternal> ActionExitPoints = new List<ActionExitPointInternal>();
         [FormerlySerializedAs("ActionExitParameters")] public List<ActionExitParametersProviderInternal> ActionExitParameterProviders = new List<ActionExitParametersProviderInternal>();
@@ -68,9 +63,6 @@ namespace mtion.room.sdk.action
             }
         }
         
-        ////////////////////////////////////////////////////////////////////////////////////////
-        ///  IMActionInterfaceHandler Implementations
-        ////////////////////////////////////////////////////////////////////////////////////////
         
         public void Invoke(ActionEventData actionData)
         {
@@ -95,13 +87,10 @@ namespace mtion.room.sdk.action
                         return;
                     }
 
-                    // Generate parameters based on input and definitions
                     List<object> parameters = TypeConversion.GenerateParameters(input, paramdef);
 
-                    // Include automated metadata for invokation
                     parameters.Add(actionData.Metadata);
 
-                    // TODO: Register to listen to callback event if there is one
                     
                     method.Invoke(entry.Target, parameters.ToArray());
                 }
@@ -115,9 +104,6 @@ namespace mtion.room.sdk.action
             desc.ActionName = ActionName;
             desc.ActionDescription = ActionDescription;
             
-            // TODO: Change this so we don't need to create new objects, and can instead reference the objects we already have
-            // The reason we are not doing this right now, is because the objects could be changed by whoever is getting
-            // the interface descriptor, and that could break everything
             
             desc.ValidEntryPoints = new List<ActionEntryPointInfo>();
             foreach (ActionEntryPointInternal entryPoint in ActionEntryPoints)
@@ -158,9 +144,6 @@ namespace mtion.room.sdk.action
             return desc;
         }
 
-        ////////////////////////////////////////////////////////////////////////////////////////
-        ///  Public functions
-        ////////////////////////////////////////////////////////////////////////////////////////
 
         public void BindToActionExit(string exitGuid, Action onExit)
         {

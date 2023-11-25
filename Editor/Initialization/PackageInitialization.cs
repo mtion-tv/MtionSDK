@@ -111,12 +111,10 @@ namespace mtion.room.sdk
             SDK_ASSET
         }
 
-        // Deserializer setup
         private static IDeserializer deserializer = new DeserializerBuilder()
             .WithNamingConvention(NullNamingConvention.Instance)
             .Build();
 
-        // Serializer setup
         private static ISerializer serializer = new SerializerBuilder()
             .WithNamingConvention(CamelCaseNamingConvention.Instance)
             .Build();
@@ -128,7 +126,6 @@ namespace mtion.room.sdk
         public string FileGuid;
         public int FileType;
 
-        //private dynamic parsedObject = null;
 
         public MonoBehaviourYAMLParser() { }
 
@@ -143,11 +140,9 @@ namespace mtion.room.sdk
 
             fileContents = File.ReadAllText(fileLocation);
 
-            // Remove Unity specific tags
             var input = Regex.Replace(fileContents, @"^%TAG !u!.*$", string.Empty, RegexOptions.Multiline);
             input = Regex.Replace(input, @"!u!\S+", string.Empty);
 
-            // Parse data
             if (sdkType == ObjectType.SCENE_ASSET)
             {
                 var parsedMonoBehaviour = deserializer.Deserialize<RootObjectAssetBase>(input);
@@ -171,8 +166,6 @@ namespace mtion.room.sdk
             FileID = fileId;
             FileGuid = fileGuid;
 
-            // Modify the values using regex
-            // Can't properly serialize using YAML as there are custom TAGS in the asset files
             string replacement = $"m_Script: {{fileID: {fileId}, guid: {fileGuid}, type: {fileType}}}";
             string revisedAssets = Regex.Replace(fileContents, @"m_Script:\s+\{fileID:.*[0-9]+,\sguid:\s[A-Za-z0-9]+,\stype:\s[0-9]+\}", replacement);
 
@@ -184,10 +177,10 @@ namespace mtion.room.sdk
     {
         private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths)
         {
-            var inPackages = importedAssets.Any(path => path.Contains("Packages/com.mtion.studio-sdk/")) ||
-                deletedAssets.Any(path => path.Contains("Packages/com.mtion.studio-sdk/")) ||
-                movedAssets.Any(path => path.Contains("Packages/com.mtion.studio-sdk/")) ||
-                movedFromAssetPaths.Any(path => path.Contains("Packages/com.mtion.studio-sdk/"));
+            var inPackages = importedAssets.Any(path => path.Contains("Packages/com.mtion.sdk/")) ||
+                deletedAssets.Any(path => path.Contains("Packages/com.mtion.sdk/")) ||
+                movedAssets.Any(path => path.Contains("Packages/com.mtion.sdk/")) ||
+                movedFromAssetPaths.Any(path => path.Contains("Packages/com.mtion.sdk/"));
 
             if (inPackages)
             {
@@ -200,27 +193,21 @@ namespace mtion.room.sdk
         {
             bool migrated = false;
 
-            // Migrate Cameras
             VirtualComponentTracker[] cameras = GameObject.FindObjectsOfType<MVirtualCameraEventTracker>();
             migrated |= MigrateAssets(cameras, MTIONObjectType.MTIONSDK_CAMERA);
 
-            // Migrate Displays
             VirtualComponentTracker[] displays = GameObject.FindObjectsOfType<MVirtualDisplayTracker>();
             migrated |= MigrateAssets(displays, MTIONObjectType.MTIONSDK_DISPLAY);
 
-            // Migrate Lights
             VirtualComponentTracker[] lights = GameObject.FindObjectsOfType<MVirtualLightingTracker>();
             migrated |= MigrateAssets(lights, MTIONObjectType.MTIONSDK_LIGHT);
 
-            // Virtual Assets
             MTIONSDKAssetBase[] virtualAssets = GameObject.FindObjectsOfType<MVirtualAssetTracker>();
             migrated |= MigrateBaseAssets(virtualAssets, MTIONObjectType.MTIONSDK_CAMERA);
 
-            // Room
             MTIONSDKAssetBase[] rooms = new MTIONSDKAssetBase[] { GameObject.FindObjectOfType<MTIONSDKRoom>() };
             migrated |= MigrateBaseAssets(rooms, MTIONObjectType.MTIONSDK_ROOM);
 
-            // Env
             MTIONSDKAssetBase[] env = new MTIONSDKAssetBase[] { GameObject.FindObjectOfType<MTIONSDKEnvironment>() };
             migrated |= MigrateBaseAssets(env, MTIONObjectType.MTIONSDK_ENVIRONMENT);
 
@@ -234,7 +221,6 @@ namespace mtion.room.sdk
 
         private static bool MigrateAssets(VirtualComponentTracker[] assetList, MTIONObjectType sdkType)
         {
-            // Nothing to migrate for now
             return true;
         }
 

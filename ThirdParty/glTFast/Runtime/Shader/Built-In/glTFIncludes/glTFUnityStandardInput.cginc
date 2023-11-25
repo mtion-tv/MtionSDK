@@ -1,19 +1,4 @@
-// Copyright 2020 Andreas Atteneder
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
 
-// Based on Unity built-in shader source. Copyright (c) 2016 Unity Technologies. MIT license (see license.txt)
 
 
 #ifndef UNITY_STANDARD_INPUT_INCLUDED
@@ -24,8 +9,6 @@
 #include "UnityPBSLighting.cginc" // TBD: remove
 #include "UnityStandardUtils.cginc"
 
-//---------------------------------------
-// Directional lightmaps & Parallax require tangent space too
 #if (_NORMALMAP || DIRLIGHTMAP_COMBINED || _PARALLAXMAP)
     #define _TANGENT_TO_WORLD 1
 #endif
@@ -34,7 +17,6 @@
     #define _DETAIL 1
 #endif
 
-//---------------------------------------
 half4       baseColorFactor;
 half        alphaCutoff;
 
@@ -87,8 +69,6 @@ half        emissiveTexture_texCoord;
 
 half4       specularFactor;
 
-//-------------------------------------------------------------------------------------
-// Input functions
 
 struct VertexInput
 {
@@ -111,11 +91,9 @@ float4 TexCoords(VertexInput v)
     float4 texcoord;
 #ifdef _TEXTURE_TRANSFORM
 
-    // Scale and Rotation: 2x2 matrix multiplication
     texcoord.z = v.uv0.x * baseColorTexture_ST.x + v.uv0.y * baseColorTexture_Rotation.y;
     texcoord.w = v.uv0.x * baseColorTexture_Rotation.x + v.uv0.y * baseColorTexture_ST.y;
 
-    // Transform/Offset
     texcoord.xy = texcoord.zw + baseColorTexture_ST.zw;
 
     texcoord.zw = TRANSFORM_TEX(((_UVSec == 0) ? v.uv0 : v.uv1), _DetailAlbedoMap);
@@ -140,11 +118,9 @@ float2 TexCoordsSingleSimple(float2 uv, float4 st)
 float2 TexCoordsSingleIntern(float2 uv, float4 st, float2 rotation)
 {
     float2 texcoord;
-    // Scale and Rotation: 2x2 matrix multiplication
     float2 sr;
     sr.x = uv.x * st.x + uv.y * rotation.y;
     sr.y = uv.x * rotation.x + uv.y * st.y;
-    // Transform/Offset
     texcoord.xy = sr + st.zw;
     return texcoord;
 }
@@ -172,8 +148,6 @@ half Alpha(float2 uv)
 half Occlusion(float2 uv)
 {
 #if (SHADER_TARGET < 30)
-    // SM20: instruction count limitation
-    // SM20: simpler occlusion
     return tex2D(occlusionTexture, uv).r;
 #else
     half occ = tex2D(occlusionTexture, uv).r;
@@ -247,7 +221,6 @@ half3 NormalInTangentSpace(float2 texcoords)
 float4 Parallax (float4 texcoords, half3 viewDir)
 {
 #if !defined(_PARALLAXMAP) || (SHADER_TARGET < 30)
-    // Disable parallax on pre-SM3.0 shader target models
     return texcoords;
 #else
     half h = tex2D (_ParallaxMap, texcoords.xy).g;

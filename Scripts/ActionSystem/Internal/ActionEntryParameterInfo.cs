@@ -8,9 +8,6 @@ using mtion.service.interaction;
 
 namespace mtion.room.sdk.action
 {
-    ////////////////////////////////////////////////////////////////////////////////////////
-    ///  PARAMETER CONFIG
-    ////////////////////////////////////////////////////////////////////////////////////////
 
     [Serializable]
     public class TypeMetadata
@@ -45,7 +42,6 @@ namespace mtion.room.sdk.action
     [Serializable]
     public class ContainerMetadata : TypeMetadata
     {
-        // -1: Infinity
         public int MaxCount = -1;
         
         public override object DefaultValue => null;
@@ -54,7 +50,6 @@ namespace mtion.room.sdk.action
     [Serializable]
     public class StringMetadata : TypeMetadata
     {
-        // -1: Infinity
         public int TotalLength = -1;
         public string Default = "interlinked";
         
@@ -80,7 +75,6 @@ namespace mtion.room.sdk.action
         public string Description = "Enter description here";
         public TypeMetadata Metadata;
 
-        // Internal Serialization/Deserialization
         [SerializeField, HideInInspector]
         private string _internalMetadataCache;
 

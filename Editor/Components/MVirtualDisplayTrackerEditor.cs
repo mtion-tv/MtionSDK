@@ -27,7 +27,6 @@ namespace mtion.room.sdk
         private MVirtualDisplayTracker instance_ = null;
         private bool mExtraConfiguration = false;
 
-        // Overlay
         private object sceneOverlayWindow;
         private MethodInfo showSceneViewOverlay;
 
@@ -41,7 +40,6 @@ namespace mtion.room.sdk
             }
 
 
-            // Setup Scene Overlay
             var unityEditor = Assembly.GetAssembly(typeof(UnityEditor.SceneView));
             var overlayWindowType = unityEditor.GetType("UnityEditor.OverlayWindow");
             var sceneViewOverlayType = unityEditor.GetType("UnityEditor.SceneViewOverlay");
@@ -65,7 +63,6 @@ namespace mtion.room.sdk
 
         private static void DoOverlayUI(UnityEngine.Object target, SceneView sceneView)
         {
-            //GUILayout.Button("Hello there");
             MVirtualDisplayTracker display = (MVirtualDisplayTracker)target;
             if (GUILayout.Button("Display Type: " + display.GetDisplayType().ToString()))
             {
@@ -87,9 +84,6 @@ namespace mtion.room.sdk
 
         public override void OnInspectorGUI()
         {
-            ///////////////////////////////////////////////////////////////////////
-            // Configuration Control
-            ///////////////////////////////////////////////////////////////////////
 
             GUI.enabled = false;
 
@@ -99,7 +93,6 @@ namespace mtion.room.sdk
 
             GUI.enabled = true;
 
-            // Show Gizmo options
             instance_.gizmoDisplaySelection = EditorGUILayout.Popup("Gizmo Display:", instance_.gizmoDisplaySelection, displayGizmoOptions.ToArray());
         }
     }

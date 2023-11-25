@@ -8,22 +8,14 @@ using Object = UnityEngine.Object;
 
 namespace mtion.room.sdk.action
 {
-    ////////////////////////////////////////////////////////////////////////////////////////
-    ///  Util
-    ////////////////////////////////////////////////////////////////////////////////////////
 
 
 
 
-    ////////////////////////////////////////////////////////////////////////////////////////
-    ///  Type Converter
-    ////////////////////////////////////////////////////////////////////////////////////////
 
     public static class TypeConversion
     {
 
-        ////////////////////////////////////////////////////////////////////////////////////////
-        ///  Numeric Converter
         public static class NumericConverter
         {
             public static bool IsNumericType(Type type)
@@ -99,8 +91,6 @@ namespace mtion.room.sdk.action
         }
 
 
-        ////////////////////////////////////////////////////////////////////////////////////////
-        ///  Container Converter
         public static class ContainerConverter
         {
             public static T DeserializeContainer<T>(string jsonString)
@@ -149,7 +139,6 @@ namespace mtion.room.sdk.action
             typeof(Dictionary<,>),
             typeof(HashSet<>),
             typeof(Array),
-            // TODO: Add other container types here
         };
 
                 foreach (Type containerType in containerTypes)
@@ -191,12 +180,6 @@ namespace mtion.room.sdk.action
         }
 
 
-        /// <summary>
-        /// Verifies and converts a list of incoming data with the expected parameter definitions
-        /// </summary>
-        /// <param name="input"></param>
-        /// <param name="blueprint"></param>
-        /// <returns></returns>
         public static List<object> GenerateParameters(List<object> inputParameters, List<ActionEntryParameterInfo> parameterDefinitions)
         {
             List<object> output = new List<object>();
@@ -211,16 +194,13 @@ namespace mtion.room.sdk.action
                     param = inputParameters[i];
                 }
 
-                // Get type information
                 Type expectedType = Type.GetType(paramInfo.ParameterType);
                 Type inputType = param == null ? typeof(object) : param.GetType();
 
-                // Add to parameter list
                 if (!inputType.Equals(expectedType))
                 {
                     if (NumericConverter.IsNumericType(inputType) && NumericConverter.IsNumericType(expectedType))
                     {
-                        // Try to cast to numertic type
                         param = NumericConverter.ConvertToNumericValue(param, expectedType);
                     }
                     else
@@ -228,12 +208,9 @@ namespace mtion.room.sdk.action
                         Debug.LogWarning("Mismatch or undefined parameters between incoming parameters and registered parameters in Action");
                         param = null;
 
-                        // TODO: Try to force conversion here? 
-                        //       Mostly likely not a good solution as it can have unintended behavior or security converns
                     }
                 }
 
-                // Attempt to set defaults as defined by the asset developer. else, we set to new instance of the object's type
                 if (param == null)
                 {
                     if (NumericConverter.IsNumericType(expectedType) && paramInfo.Metadata.Is<NumericMetadata>())
@@ -248,12 +225,10 @@ namespace mtion.room.sdk.action
                     }
                     else
                     {
-                        // Set to new instance of type
                         param = Activator.CreateInstance(expectedType);
                     }
                 }
 
-                // Enforce constraints
                 if (NumericConverter.IsNumericType(expectedType) && paramInfo.Metadata.Is<NumericMetadata>())
                 {
                     NumericMetadata numericMetadata = paramInfo.Metadata.Cast<NumericMetadata>();
@@ -264,30 +239,25 @@ namespace mtion.room.sdk.action
                 {
                     ContainerMetadata containerMetadata = paramInfo.Metadata.Cast<ContainerMetadata>();
 
-                    // TODO:
                 }
                 else if (expectedType == typeof(string) && paramInfo.Metadata.Is<StringMetadata>())
                 {
                     StringMetadata stringMetadata = paramInfo.Metadata.Cast<StringMetadata>();
-                    // TODO:
 
                 }
                 else if (expectedType == typeof(bool) && paramInfo.Metadata.Is<BoolMetadata>())
                 {
                     BoolMetadata boolMetadata = paramInfo.Metadata.Cast<BoolMetadata>();
-                    // TODO:
 
 
                 }
                 else if (expectedType == typeof(Object) && paramInfo.Metadata.Is<ObjectMetadata>())
                 {
                     ObjectMetadata objectMetadata = paramInfo.Metadata.Cast<ObjectMetadata>();
-                    // TODO:
 
                 }
                 else
                 {
-                    // TODO: others
                 }
 
 

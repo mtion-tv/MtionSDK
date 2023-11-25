@@ -24,32 +24,29 @@ namespace mtion.room.sdk
 
         public static void TakeSnapshotOfAssetInCurrentScene(Camera camera, string basePersistentDirectory)
         {
+            camera.clearFlags = CameraClearFlags.SolidColor;
+            camera.backgroundColor = Color.clear;
+
             TakeSnapshot(camera, basePersistentDirectory);
         }
 
         public static void TakeSnapShotOfAssetInIsolatedScene(MTIONSDKAssetBase asset, string basePersistentDirectory)
         {
-            //Make a temporary prefab using the asset in order to instantiate it in the other scene
-            PrefabUtility.SaveAsPrefabAsset(asset.ObjectReference, ThumbnailCreationTempPrefabPath);
+            PrefabUtility.SaveAsPrefabAsset(asset.ObjectReferenceProp, ThumbnailCreationTempPrefabPath);
             GameObject assetObject = PrefabUtility.LoadPrefabContents(ThumbnailCreationTempPrefabPath);
 
-            //Open the new scene and keep a reference to the previous one
             string currentScenePath = EditorSceneManager.GetActiveScene().path;
             EditorSceneManager.OpenScene(ThumbnailCreationScenePath, OpenSceneMode.Single);
 
-            //Instantiate the asset in the thumbnail scene
             Quaternion assetRotation = Quaternion.Euler(0f, -120f, 0f);
             GameObject goToSnapshot = GameObject.Instantiate(assetObject, Vector3.zero, assetRotation);
 
-            //Center it in the camera
             Camera camera = Camera.main;
             CenterTargetInFrame centerTargetInFrame = camera.GetComponent<CenterTargetInFrame>();
             centerTargetInFrame.CenterOnTarget(goToSnapshot);
             
-            //Take the snapshot
             TakeSnapshot(camera, basePersistentDirectory);
 
-            //Return to the previous scene
             AssetDatabase.DeleteAsset(ThumbnailCreationTempPrefabPath);
             EditorSceneManager.OpenScene(currentScenePath, OpenSceneMode.Single);
         }
