@@ -6,10 +6,11 @@ _Build, create, and publish customized clubhouses, assets and experiences._
 
 ## Installation
 
-1. Open package manager inside Unity
-2. Click "+" button
-3. Click "Add package from Git URL"
-4. Paste in `https://github.com/mtion-tv/MtionSDK.git`
+1. First, make sure Git is installed (https://git-scm.com/)
+2. Open package manager inside Unity
+3. Click "+" button
+4. Click "Add package from Git URL"
+5. Paste in `https://github.com/mtion-tv/MtionSDK.git`
 
 OR
 
@@ -18,6 +19,15 @@ Open the `manifest.json` file inside of the `Packages` folder in root Unity proj
 ```
 "com.mtion.sdk": "https://github.com/mtion-tv/MtionSDK.git",
 ```
+
+or 
+
+Click on Releases (right side bar) and download the `.tgz` package. Then:
+
+1. Open package manager inside Unity
+2. Click the "+" button
+3. Click "Add package from tarball"
+4. Locate and choose the `.tgz` package you downloaded
 
 ## Refreshing Package
 
