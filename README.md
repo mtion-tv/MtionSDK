@@ -20,7 +20,7 @@ Open the `manifest.json` file inside of the `Packages` folder in root Unity proj
 "com.mtion.sdk": "https://github.com/mtion-tv/MtionSDK.git",
 ```
 
-or 
+OR 
 
 Click on Releases (right side bar) and download the `.tgz` package. Then:
 
