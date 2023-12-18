@@ -15,7 +15,7 @@ namespace mtion.room.sdk.compiled
 
         public string EnvironmentInternalID;
         
-        [SerializeField, HideInInspector] 
+        [SerializeField] 
         public GameObject SDKRoot;
 
         public override void MigrateFromDescriptorSO()

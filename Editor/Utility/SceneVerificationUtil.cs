@@ -29,7 +29,7 @@ namespace mtion.room.sdk
             var rigidbodies = GameObject.FindObjectsOfType<Rigidbody>();
             foreach (var rb in rigidbodies)
             {
-                if (rb.GetComponent<Collider>() == null)
+                if (rb.GetComponentInChildren<Collider>() == null)
                 {
                     output.Add(rb.gameObject);
                 }

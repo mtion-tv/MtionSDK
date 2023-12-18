@@ -1,9 +1,10 @@
-using mtion.room.sdk.compiled;
 using System;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using mtion.room.sdk.compiled;
 using UnityEngine;
+using CompressionLevel = System.IO.Compression.CompressionLevel;
 
 namespace mtion.room.sdk
 {
@@ -45,6 +46,10 @@ namespace mtion.room.sdk
                 case MTIONObjectType.MTIONSDK_ENVIRONMENT:
                     ExportEnvironmentScene();
                     break;
+                
+                case MTIONObjectType.MTIONSDK_AVATAR:
+                    ExportAssetScene();
+                    break;
             }
         }
 
@@ -67,8 +72,8 @@ namespace mtion.room.sdk
                 File.Delete(assetFile);
             }
 
-            var basePresistentDirector = SDKUtil.GetSDKItemDirectory(sceneObjectDescriptor, LocationOptions);
-            ZipFile.CreateFromDirectory(basePresistentDirector, assetFile, System.IO.Compression.CompressionLevel.Optimal, true);
+            var basePersistentDirector = SDKUtil.GetSDKItemDirectory(sceneObjectDescriptor, LocationOptions);
+            ZipFile.CreateFromDirectory(basePersistentDirector, assetFile, CompressionLevel.Optimal, true);
         }
         
         private void ExportRoomScene()
@@ -79,13 +84,15 @@ namespace mtion.room.sdk
             ComponentVerificationUtil.VerifyAllComponentsIntegrity(roomDescriptor, MTIONObjectType.MTIONSDK_DISPLAY);
             ComponentVerificationUtil.VerifyAllComponentsIntegrity(roomDescriptor, MTIONObjectType.MTIONSDK_LIGHT);
             ComponentVerificationUtil.VerifyAllComponentsIntegrity(roomDescriptor, MTIONObjectType.MTIONSDK_ASSET);
+            ComponentVerificationUtil.VerifyAllComponentsIntegrity(roomDescriptor, MTIONObjectType.MTIONSDK_AVATAR);
 
             MVirtualCameraEventTracker[] cameraTrackers = GameObject.FindObjectsOfType<MVirtualCameraEventTracker>();
             MVirtualDisplayTracker[] displayTrackers = GameObject.FindObjectsOfType<MVirtualDisplayTracker>();
             MVirtualAssetTracker[] assetTrackers = GameObject.FindObjectsOfType<MVirtualAssetTracker>();
             MVirtualLightingTracker[] lightTrackers = GameObject.FindObjectsOfType<MVirtualLightingTracker>();
+            MVirtualAvatarTracker[] avatarTrackers = GameObject.FindObjectsOfType<MVirtualAvatarTracker>();
 
-            VerifyAndSaveSDKComponents(cameraTrackers, displayTrackers, lightTrackers, assetTrackers);
+            VerifyAndSaveSDKComponents(cameraTrackers, displayTrackers, lightTrackers, assetTrackers, avatarTrackers);
 
             exportPercentComplete = 0.0f;
 
@@ -161,13 +168,15 @@ namespace mtion.room.sdk
                 MVirtualDisplayTracker[] displayTrackers = GameObject.FindObjectsOfType<MVirtualDisplayTracker>();
                 MVirtualAssetTracker[] assetTrackers = GameObject.FindObjectsOfType<MVirtualAssetTracker>();
                 MVirtualLightingTracker[] lightTrackers = GameObject.FindObjectsOfType<MVirtualLightingTracker>();
+                MVirtualAvatarTracker[] avatarTrackers = GameObject.FindObjectsOfType<MVirtualAvatarTracker>();
                 string configData = ConfigurationGenerator.ConvertSDKSceneToJsonString(
                     sceneBase,
                     userAuthentication,
                     cameraTrackers,
                     displayTrackers,
                     lightTrackers,
-                    assetTrackers);
+                    assetTrackers,
+                    avatarTrackers);
                 WriteConfigurationFile(basePersistentDirectory, configData);
             }
             catch (Exception ex)
@@ -212,6 +221,7 @@ namespace mtion.room.sdk
                     null,
                     null,
                     null,
+                    null,
                     null);
                 WriteConfigurationFile(basePersistentDirectory, configData);
             }
@@ -252,6 +262,11 @@ namespace mtion.room.sdk
                         assetBase = GameObject.FindObjectsOfType<MVirtualAssetTracker>()
                             .Where(tracker => tracker.GUID == guid).First();
                     }
+                    else if (assetBaseType == typeof(MVirtualAvatarTracker))
+                    {
+                        assetBase = GameObject.FindObjectsOfType<MVirtualAvatarTracker>()
+                            .Where(tracker => tracker.GUID == guid).First();
+                    }
                     else
                     {
                         assetBase = GameObject.FindObjectsOfType<MTIONSDKAssetBase>()
@@ -261,7 +276,18 @@ namespace mtion.room.sdk
 
                 CreateDescriptorFile(assetBase);
 
-                string configData = ConfigurationGenerator.ConvertSDKAssetToJsonString(assetBase, userAuthentication);
+                string configData;
+                switch (assetBase.ObjectType)
+                {
+                    case MTIONObjectType.MTIONSDK_AVATAR:
+                        configData = ConfigurationGenerator.ConvertSDKAvatarToJsonString(assetBase, userAuthentication);
+                        break;
+                    case MTIONObjectType.MTIONSDK_ASSET:
+                    default:
+                        configData = ConfigurationGenerator.ConvertSDKAssetToJsonString(assetBase, userAuthentication);
+                        break;    
+                }
+                    
                 WriteConfigurationFile(basePersistentDirectory, configData);
             }
             catch (Exception ex)
@@ -303,11 +329,17 @@ namespace mtion.room.sdk
             MVirtualCameraEventTracker[] cameraTrackers,
             MVirtualDisplayTracker[] displayTrackers,
             MVirtualLightingTracker[] lightTrackers,
-            MVirtualAssetTracker[] assetTrackers)
+            MVirtualAssetTracker[] assetTrackers,
+            MVirtualAvatarTracker[] avatarTrackers)
         {
+            foreach (var avatar in avatarTrackers)
+            {
+                SDKEditorUtil.InitAddressableAssetFields(avatar, MTIONObjectType.MTIONSDK_AVATAR);
+            }
+            
             foreach (var asset in assetTrackers)
             {
-                SDKEditorUtil.InitAddressableAssetFields(asset, asset.ObjectType);
+                SDKEditorUtil.InitAddressableAssetFields(asset, MTIONObjectType.MTIONSDK_ASSET);
             }
 
             LoopOverComponentTrackers(cameraTrackers);

@@ -67,7 +67,12 @@ namespace mtion.room.sdk
                 FixTrackedAsset(assetSDKObject, MTIONObjectType.MTIONSDK_ASSET);
             }
 
-
+            var avatarSDKObject = GameObject.FindObjectOfType<MTIONSDKAvatar>();
+            if (avatarSDKObject != null)
+            {
+                FixTrackedAsset(avatarSDKObject, MTIONObjectType.MTIONSDK_AVATAR);
+            }
+            
             if (manualCheck)
             {
                 manualCheck = false;

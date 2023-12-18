@@ -123,6 +123,8 @@ namespace mtion.room.sdk.compiled
                 case MTIONObjectType.MTIONSDK_ASSET:
                     VerifyAllAssetsIntegrity(roomSDKDescriptorObject);
                     return;
+                case MTIONObjectType.MTIONSDK_AVATAR:
+                    return;
                 default:
                     return;
             }

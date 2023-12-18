@@ -29,11 +29,6 @@ namespace mtion.room.sdk
             UnityEditor.Handles.EndGUI();
         }
 
-        private void OnDrawGizmosSelected()
-        {
-           
-        }
-
         private void OnTransformChildrenChanged()
         {
             if (transform.childCount > 0)

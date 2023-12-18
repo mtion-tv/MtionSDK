@@ -34,7 +34,8 @@ namespace mtion.room.sdk
                 throw new ArgumentNullException();
             }
 
-            if (assetBase.ObjectType == MTIONObjectType.MTIONSDK_ENVIRONMENT)
+            if (assetBase.ObjectType == MTIONObjectType.MTIONSDK_ENVIRONMENT ||
+                assetBase.ObjectType == MTIONObjectType.MTIONSDK_ROOM)
             {
                 CreateAddressableAssetScene();
             }
@@ -54,7 +55,6 @@ namespace mtion.room.sdk
             if (assetBase.ObjectType == MTIONObjectType.MTIONSDK_ENVIRONMENT)
             {
                 ExportLightmapData(assetBase, exportLocationOptions, null);
-
             }
 
             try
@@ -72,12 +72,12 @@ namespace mtion.room.sdk
             var dir = SDKUtil.GetAssetPrefabDirectory();
             Directory.CreateDirectory(dir);
 
-            var roomPrefabPath = Path.Combine(dir, $"{assetBase.InternalID}.prefab").Replace('\\', '/');
-            assetBase.AddressableID = roomPrefabPath;
+            var exportPrefabPath = Path.Combine(dir, $"{assetBase.InternalID}.prefab").Replace('\\', '/');
+            assetBase.AddressableID = exportPrefabPath;
 
-            AssetDatabase.DeleteAsset(roomPrefabPath);
+            AssetDatabase.DeleteAsset(exportPrefabPath);
 
-            PrefabUtility.SaveAsPrefabAsset(assetBase.ObjectReferenceProp, roomPrefabPath);
+            PrefabUtility.SaveAsPrefabAsset(assetBase.ObjectReferenceProp, exportPrefabPath);
             AssetDatabase.SaveAssets();
         }
 
@@ -86,15 +86,14 @@ namespace mtion.room.sdk
             var dir = SDKUtil.GetSceneDirectory();
             Directory.CreateDirectory(dir);
 
-
-            var envScenePath = Path.Combine(dir, $"{assetBase.InternalID}.unity").Replace('\\', '/');
-            assetBase.AddressableID = envScenePath;
+            var exportScenePath = Path.Combine(dir, $"{assetBase.InternalID}.unity").Replace('\\', '/');
+            assetBase.AddressableID = exportScenePath;
 
             var scenePath = assetBase.ObjectReferenceProp.scene.path;
-            AssetDatabase.DeleteAsset(envScenePath);
+            AssetDatabase.DeleteAsset(exportScenePath);
 
-            if (!AssetDatabase.CopyAsset(scenePath, envScenePath))
-                Debug.LogWarning($"Failed to copy {envScenePath}");
+            if (!AssetDatabase.CopyAsset(scenePath, exportScenePath))
+                Debug.LogWarning($"Failed to copy {exportScenePath}");
         }
 
         public void CreateAddressablesGroupForExport()
@@ -172,7 +171,6 @@ namespace mtion.room.sdk
                             true);
                     }
                 }
-
             }
             else
             {

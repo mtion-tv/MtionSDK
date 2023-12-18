@@ -30,7 +30,8 @@ namespace mtion.room.sdk
             MVirtualCameraEventTracker[] cameras,
             MVirtualDisplayTracker[] displays,
             MVirtualLightingTracker[] lights,
-            MVirtualAssetTracker[] assetTrackers)
+            MVirtualAssetTracker[] assetTrackers,
+            MVirtualAvatarTracker[] avatarTrackers)
         {
             SceneConfigurationFile model = new SceneConfigurationFile();
 
@@ -112,6 +113,13 @@ namespace mtion.room.sdk
                 }
 
                 model.NumAssets = assetTrackers.Length;
+
+                foreach (var avatar in avatarTrackers)
+                {
+                    model.Avatars.Add(ConvertAvatarToConfigData(avatar));
+                }
+
+                model.NumAvatars = avatarTrackers.Length;
             }
             else
             {
@@ -128,9 +136,7 @@ namespace mtion.room.sdk
                 });
         }
 
-        public static string ConvertSDKAssetToJsonString(
-            MTIONSDKAssetBase descriptor,
-            UserSdkAuthentication userAuth)
+        public static string ConvertSDKAssetToJsonString(MTIONSDKAssetBase descriptor, UserSdkAuthentication userAuth)
         {
             string version = "0.0.0";
 
@@ -193,6 +199,51 @@ namespace mtion.room.sdk
             }
             model.ActionDataGroup = actionDataGroup;
 
+            return JsonConvert.SerializeObject(model, Formatting.None,
+                new JsonSerializerSettings()
+                {
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                });
+        }
+
+        public static string ConvertSDKAvatarToJsonString(MTIONSDKAssetBase descriptor, UserSdkAuthentication userAuth)
+        {
+            string version = "0.0.0";
+
+#if UNITY_EDITOR
+            var assembly = typeof(ConfigurationGenerator).Assembly;
+            var packageInfo = PackageInfo.FindForAssembly(assembly);
+            if (packageInfo != null)
+            {
+                version = packageInfo.version;
+            }
+            else
+            {
+                TextAsset packageInfoFile = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/LocalPackages/MTIONStudioSDK/package.json");
+                MyPackageManifest manifest = JsonConvert.DeserializeObject<MyPackageManifest>(packageInfoFile.text);
+                version = manifest.version;
+            }
+#endif
+
+            AvatarConfigurationFile model = new AvatarConfigurationFile();
+
+            model.OwnerGUID = userAuth.GetUserGUID();
+            model.OwnerEmail = userAuth.GetUserEmail();
+
+            model.SceneType = descriptor.ObjectType;
+            model.Name = descriptor.Name;
+            model.GUID = descriptor.InternalID;
+            model.S3URI = SDKUtil.GenerateServerURI(
+                userAuth.GetUserGUID(),
+                descriptor.InternalID,
+                descriptor.ObjectType);
+            model.Version = descriptor.Version;
+            model.InternalVersion = version;
+            var unixTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            model.UpdateTimeMS = unixTimestamp;
+            model.CreateTimeMS = descriptor.CreateTimeMS;
+            model.Metadata = null;
+            
             return JsonConvert.SerializeObject(model, Formatting.None,
                 new JsonSerializerSettings()
                 {
@@ -273,6 +324,19 @@ namespace mtion.room.sdk
             return assetModel;
         }
 
+        public static AvatarParameters ConvertAvatarToConfigData(MVirtualAvatarTracker avatar)
+        {
+            AvatarParameters avatarModel = new AvatarParameters();
+            
+            avatarModel.GUID = avatar.InternalID;
+
+            avatarModel.Position = avatar.transform.position;
+            avatarModel.Rotation = avatar.transform.rotation;
+            avatarModel.Scale = avatar.transform.localScale;
+
+            return avatarModel;
+        }
+
         public static string ConvertConfigurationSettingsToJson(SceneConfigurationFile configFile)
         {
             return JsonConvert.SerializeObject(configFile, Formatting.None,
@@ -285,6 +349,15 @@ namespace mtion.room.sdk
         public static string ConvertAssetConfigurationSettingsToJson(AssetConfigurationFile assetConfigFile) 
         {
             return JsonConvert.SerializeObject(assetConfigFile, Formatting.None,
+                new JsonSerializerSettings()
+                {
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                });
+        }
+
+        public static string ConvertAvatarConfigurationSettingsToJson(AvatarConfigurationFile avatarConfigFile)
+        {
+            return JsonConvert.SerializeObject(avatarConfigFile, Formatting.None,
                 new JsonSerializerSettings()
                 {
                     ReferenceLoopHandling = ReferenceLoopHandling.Ignore
@@ -304,6 +377,13 @@ namespace mtion.room.sdk
             AssetConfigurationFile assetConfiguration =
                 JsonConvert.DeserializeObject<AssetConfigurationFile>(jsonData);
             return assetConfiguration;
+        }
+
+        public static AvatarConfigurationFile ConvertJsonToAvatarConfigurationSettings(string jsonData)
+        {
+            AvatarConfigurationFile avatarConfiguration =
+                JsonConvert.DeserializeObject<AvatarConfigurationFile>(jsonData);
+            return avatarConfiguration;
         }
     }
 }
