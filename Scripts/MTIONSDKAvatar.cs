@@ -12,14 +12,6 @@ namespace mtion.room.sdk.compiled
         
         private void Update()
         {
-            if (ObjectReference.transform.childCount > 0)
-            {
-                Transform objectReferenceChild = ObjectReference.transform.GetChild(0);
-                if (objectReferenceChild.GetComponent<MTIONNavMeshAgent>() == null)
-                {
-                    MTIONNavMeshAgent agent = objectReferenceChild.gameObject.AddComponent<MTIONNavMeshAgent>();
-                }
-            }
         }
         
 #endif

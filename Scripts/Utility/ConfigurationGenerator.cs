@@ -174,11 +174,11 @@ namespace mtion.room.sdk
             model.CreateTimeMS = descriptor.CreateTimeMS;
             model.Metadata = null;
 
+            var updatedGO = GameObject.FindObjectsOfType<MTIONSDKAssetBase>()
+                .First(x => x.InternalID == descriptor.InternalID);
+
             if (descriptor.ObjectType == MTIONObjectType.MTIONSDK_ASSET)
             {
-                var updatedGO = GameObject.FindObjectsOfType<MTIONSDKAssetBase>()
-                    .First(x => x.InternalID == descriptor.InternalID);
-
                 var rb = updatedGO.GetComponentInChildren<Rigidbody>();
                 model.HasPhysics = rb != null
                     ? AssetConfigurationFile.HasPhysicsSetting.TRUE
@@ -243,7 +243,13 @@ namespace mtion.room.sdk
             model.UpdateTimeMS = unixTimestamp;
             model.CreateTimeMS = descriptor.CreateTimeMS;
             model.Metadata = null;
-            
+
+            var updatedGO = GameObject.FindObjectsOfType<MTIONSDKAssetBase>()
+                .First(x => x.InternalID == descriptor.InternalID);
+
+            var avatarRagdoll = updatedGO.ObjectReference.GetComponentInChildren<MTIONAvatarRagdoll>();
+            model.HasRagdoll = avatarRagdoll != null && avatarRagdoll.HasRequiredBones();
+
             return JsonConvert.SerializeObject(model, Formatting.None,
                 new JsonSerializerSettings()
                 {

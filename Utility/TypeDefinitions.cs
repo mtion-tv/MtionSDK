@@ -9,6 +9,7 @@ namespace mtion.room.sdk.compiled
         MTIONSDK_DISPLAY,
         MTIONSDK_CAMERA,
         MTIONSDK_LIGHT,
-        MTIONSDK_AVATAR
+        MTIONSDK_AVATAR,
+        MTIONSDK_VSF
     }
 }

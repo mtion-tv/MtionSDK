@@ -1,7 +1,7 @@
 {
     "name": "com.mtion.sdk",
     "description": "Tools to create assets and clubhouses for mtion studio.",
-    "version": "0.11.2",
+    "version": "0.12.0",
     "unity": "2021.3",
     "displayName": "Mtion SDK",
     "dependencies": {
@@ -22,6 +22,11 @@
             "displayName": "UnityEvents Export (Action)",
             "description": "Simple example showing you how to using UnityEvents with the Action system",
             "path": "Examples~/UnityEventExample"
+        },
+        {
+            "displayName": "Animation Triggers (Action)",
+            "description": "Simple example showing you how to using Animation Triggers with the Action system",
+            "path": "Examples~/AnimationExample"
         },
         {
             "displayName": "Gaming Room (Asset)",

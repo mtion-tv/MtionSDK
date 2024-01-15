@@ -99,5 +99,17 @@ namespace mtion.room.sdk
 
             return output;
         }
+
+        public static bool IsRagdollConfiguredForAvatar()
+        {
+            var descriptor = GameObject.FindObjectOfType<MTIONSDKAvatar>();
+            if (descriptor == null || descriptor.ObjectReference == null)
+            {
+                return true;
+            }
+
+            var avatarRagdoll = descriptor.ObjectReference.GetComponentInChildren<MTIONAvatarRagdoll>();
+            return avatarRagdoll != null;
+        }
     }
 }

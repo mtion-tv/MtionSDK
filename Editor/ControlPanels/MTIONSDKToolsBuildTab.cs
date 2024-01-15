@@ -13,6 +13,7 @@ using mtion.room.sdk.customproperties;
 using System.Linq;
 using mtion.room.sdk.action;
 using UnityEngine.AI;
+using UnityEngine.EventSystems;
 
 namespace mtion.room.sdk
 {
@@ -121,7 +122,7 @@ namespace mtion.room.sdk
                 toggleStyle.fixedWidth = 22;
                 toggleStyle.fixedHeight = 22;
 
-                StartBox();
+                MTIONSDKToolsWindow.StartBox();
                 {
                     GUILayout.Label("Settings", headerLabelStyle);
                     GUILayout.Space(10);
@@ -188,9 +189,9 @@ namespace mtion.room.sdk
                     GUILayout.EndHorizontal();
                     GUILayout.Space(10);
                 }
-                EndBox();
+                MTIONSDKToolsWindow.EndBox();
 
-                StartBox();
+                MTIONSDKToolsWindow.StartBox();
                 {
                     GUILayout.Label("Options", headerLabelStyle);
                     GUILayout.Space(10);
@@ -272,7 +273,6 @@ namespace mtion.room.sdk
                     }
 
 
-#if ENABLE_SDK_AVATAR_FEATURE
                     if (descriptor.ObjectType == MTIONObjectType.MTIONSDK_ROOM ||
                         descriptor.ObjectType == MTIONObjectType.MTIONSDK_ENVIRONMENT)
                     {
@@ -296,7 +296,6 @@ namespace mtion.room.sdk
 
                         GUILayout.EndHorizontal();
                     }
-#endif
 
                     if (changesMade)
                     {
@@ -304,7 +303,7 @@ namespace mtion.room.sdk
                         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
                     }
                 }
-                EndBox();
+                MTIONSDKToolsWindow.EndBox();
 
 
                 CreateCustomPropertiesTable();
@@ -379,16 +378,16 @@ namespace mtion.room.sdk
 
         private static void CreateRoomInstantiationOptions()
         {
-            StartBox();
+            MTIONSDKToolsWindow.StartBox();
             {
                 var warningMessage = "MTIONRoom or MTIONEnvironment prefab is not detected in scene.\n" +
                     "Ensure that you initialize the scene first before proceeding.\n" +
                     "<b>This will modfiy the currently opened scene.</b>";
                 MTIONSDKToolsWindow.DrawWarning(warningMessage);
             }
-            EndBox();
+            MTIONSDKToolsWindow.EndBox();
 
-            StartBox();
+            MTIONSDKToolsWindow.StartBox();
             {
                 {
                     if (GUILayout.Button(new GUIContent("Create Room Scene", "Initializes current scene to build out a mtion room"), MTIONSDKToolsWindow.LargeButtonStyle))
@@ -408,16 +407,14 @@ namespace mtion.room.sdk
                     }
 
 
-#if ENABLE_SDK_AVATAR_FEATURE
                     if (GUILayout.Button(new GUIContent("Create Avatar Scene", "Initializes current scene to build out a mtion avatar"), MTIONSDKToolsWindow.LargeButtonStyle))
                     {
                         CreateAvatarScene();
                     }
-#endif
 
                 }
             }
-            EndBox();
+            MTIONSDKToolsWindow.EndBox();
         }
 
         private static void CreateCustomPropertiesTable()
@@ -432,7 +429,7 @@ namespace mtion.room.sdk
                 return;
             }
 
-            StartBox();
+            MTIONSDKToolsWindow.StartBox();
             {
                 var headerLabelStyle = new GUIStyle(EditorStyles.label);
                 headerLabelStyle.fontStyle = FontStyle.Bold;
@@ -491,7 +488,7 @@ namespace mtion.room.sdk
                     }
                 }
             }
-            EndBox();
+            MTIONSDKToolsWindow.EndBox();
         }
 
 
@@ -618,6 +615,8 @@ namespace mtion.room.sdk
             _buildErrorsExist = false;
             _buildErrorsExist |= GenerateIncorrectNumCamerasError();
             _buildErrorsExist |= GenerateMissingColliderOnRigidbodyError();
+            _buildErrorsExist |= RemoveEventSystemsError();
+            GenerateMissingRagdollAvatarWarning();
             GenerateInvalidUnityEventActionWarnings();
             GenerateDuplicatePropertyNameWarnings();
             GenerateMissingMetadataWarnings();
@@ -634,9 +633,9 @@ namespace mtion.room.sdk
             {
                 var warningMessage = $"No enabled cameras found in scene! A camera is required to generate thumbnails.";
 
-                StartBox();
+                MTIONSDKToolsWindow.StartBox();
                 MTIONSDKToolsWindow.DrawWarning(warningMessage, MTIONSDKToolsWindow.WarningType.ERROR);
-                EndBox();
+                MTIONSDKToolsWindow.EndBox();
 
                 return true;
             }
@@ -652,9 +651,9 @@ namespace mtion.room.sdk
             {
                 var warningMessage = $"Multiple active cameras found in scene. Please disable or remove additional cameras";
 
-                StartBox();
+                MTIONSDKToolsWindow.StartBox();
                 MTIONSDKToolsWindow.DrawWarning(warningMessage, MTIONSDKToolsWindow.WarningType.ERROR);
-                EndBox();
+                MTIONSDKToolsWindow.EndBox();
 
                 return true;
             }
@@ -670,12 +669,28 @@ namespace mtion.room.sdk
                 var warningMessage = $"GameObject <b>{go.name}</b> has a Rigidbody but does not have a collider. " +
                     $"Please add a collider or remove the Rigidbody component.";
 
-                StartBox();
+                MTIONSDKToolsWindow.StartBox();
                 MTIONSDKToolsWindow.DrawWarning(warningMessage, MTIONSDKToolsWindow.WarningType.ERROR);
-                EndBox();
+                MTIONSDKToolsWindow.EndBox();
             }
 
             return gameObjectsMissingCollidersWithRb.Count > 0;
+        }
+
+        private static bool RemoveEventSystemsError()
+        {
+            EventSystem[] eventSystems = GameObject.FindObjectsOfType<EventSystem>();
+            foreach (EventSystem eventSystem in eventSystems)
+            {
+                string errorMessage = $"GameObject <b>{eventSystem.name}</b> has an EventSystem. " +
+                                     $"Please remove the GameObject or the EventSystem component.";
+
+                MTIONSDKToolsWindow.StartBox();
+                MTIONSDKToolsWindow.DrawWarning(errorMessage, MTIONSDKToolsWindow.WarningType.ERROR);
+                MTIONSDKToolsWindow.EndBox();
+            }
+
+            return eventSystems.Length > 0;
         }
 
         private static void GenerateInvalidUnityEventActionWarnings()
@@ -694,9 +709,9 @@ namespace mtion.room.sdk
                     }
                 }
 
-                StartBox();
+                MTIONSDKToolsWindow.StartBox();
                 MTIONSDKToolsWindow.DrawWarning(warningMessage);
-                EndBox();
+                MTIONSDKToolsWindow.EndBox();
             }
         }
 
@@ -719,9 +734,9 @@ namespace mtion.room.sdk
 
                 var warningMessage = $"Asset <b>{propContainer.gameObject.name}</b> has duplicate property names: {allPropNames}.";
 
-                StartBox();
+                MTIONSDKToolsWindow.StartBox();
                 MTIONSDKToolsWindow.DrawWarning(warningMessage);
-                EndBox();
+                MTIONSDKToolsWindow.EndBox();
             }
         }
 
@@ -741,9 +756,9 @@ namespace mtion.room.sdk
                 }
                 warningMessage += ".";
 
-                StartBox();
+                MTIONSDKToolsWindow.StartBox();
                 MTIONSDKToolsWindow.DrawWarning(warningMessage);
-                EndBox();
+                MTIONSDKToolsWindow.EndBox();
             }
         }
 
@@ -754,9 +769,9 @@ namespace mtion.room.sdk
             {
                 var warningMessage = $"GameObject <b>{go.name}</b> has missing scripts";
 
-                StartBox();
+                MTIONSDKToolsWindow.StartBox();
                 MTIONSDKToolsWindow.DrawWarning(warningMessage);
-                EndBox();
+                MTIONSDKToolsWindow.EndBox();
             }
         }
 
@@ -767,9 +782,9 @@ namespace mtion.room.sdk
             {
                 var warningMessage = $"<b>{(string.IsNullOrEmpty(sdkObject.Name) ? sdkObject.InternalID : sdkObject.Name)}</b> does not have a collider.";
 
-                StartBox();
+                MTIONSDKToolsWindow.StartBox();
                 MTIONSDKToolsWindow.DrawWarning(warningMessage);
-                EndBox();
+                MTIONSDKToolsWindow.EndBox();
             }
         }
 
@@ -780,9 +795,22 @@ namespace mtion.room.sdk
             {
                 var warningMessage = $"Action <b>{action.ActionName}</b> has no entry points or empty entry points. Fix this in the \"Actions\" tab.";
 
-                StartBox();
+                MTIONSDKToolsWindow.StartBox();
                 MTIONSDKToolsWindow.DrawWarning(warningMessage);
-                EndBox();
+                MTIONSDKToolsWindow.EndBox();
+            }
+        }
+
+        private static void GenerateMissingRagdollAvatarWarning()
+        {
+            var ragdollConfigured = SceneVerificationUtil.IsRagdollConfiguredForAvatar();
+            if (!ragdollConfigured)
+            {
+                var warningMessage = $"Ragdoll has not been configured for this avatar. Set up the ragdoll in the <b>Ragdoll</b> tab.";
+
+                MTIONSDKToolsWindow.StartBox();
+                MTIONSDKToolsWindow.DrawWarning(warningMessage);
+                MTIONSDKToolsWindow.EndBox();
             }
         }
 
@@ -802,10 +830,10 @@ namespace mtion.room.sdk
                     MVirtualAssetTracker tracker = (action as MonoBehaviour).GetComponentInParent<MVirtualAssetTracker>();
                     if (tracker != null)
                     {
-                        StartBox();
+                        MTIONSDKToolsWindow.StartBox();
                         MTIONSDKToolsWindow.DrawWarning(
                             $"Asset <b>{tracker.gameObject.name}</b> contains Action {action.GetType().Name}. Please remove it. Actions are not allowed on objects inside clubhouse templates.");
-                        EndBox();
+                        MTIONSDKToolsWindow.EndBox();
                     }
                 }
             }
@@ -815,36 +843,13 @@ namespace mtion.room.sdk
                 IAction[] actions = sceneDescriptorObject.ObjectReference.GetComponentsInChildren<IAction>();
                 if (actions.Length > 0)
                 {
-                    StartBox();
+                    MTIONSDKToolsWindow.StartBox();
                     MTIONSDKToolsWindow.DrawWarning($"{actions.Length} Action scripts found in the scene. Actions can only be added to assets. Fix this by removing any Action Components from the scene.");
-                    EndBox();
+                    MTIONSDKToolsWindow.EndBox();
                 }
             }
         }
 
-
-        private static void StartBox()
-        {
-            GUIStyle modifiedBox = GUI.skin.GetStyle("Box");
-            modifiedBox.normal.background = MTIONSDKToolsWindow.CreateTextureForColor(1, 1, new Color(0.14f, 0.14f, 0.14f));
-
-            EditorGUILayout.BeginHorizontal(modifiedBox);
-            GUILayout.Label(string.Empty, GUILayout.MaxWidth(5));
-
-            EditorGUILayout.BeginVertical();
-            GUILayout.Label(string.Empty, GUILayout.MaxHeight(5));
-        }
-
-        private static void EndBox()
-        {
-            GUILayout.Label(string.Empty, GUILayout.MaxHeight(5));
-            EditorGUILayout.EndVertical();
-
-            GUILayout.Label(string.Empty, GUILayout.MaxWidth(5));
-            EditorGUILayout.EndHorizontal();
-
-            GUILayout.Label(string.Empty, GUILayout.MaxHeight(5));
-        }
 
         private static Vector3 GetNewObjectPosition()
         {

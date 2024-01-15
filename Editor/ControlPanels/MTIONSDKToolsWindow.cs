@@ -19,6 +19,7 @@ namespace mtion.room.sdk
             PROPS,
             ACTIONS,
             OPTIMIZATION,
+            RAGDOLL,
             HELP
         }
 
@@ -31,6 +32,7 @@ namespace mtion.room.sdk
         private static Tabs _selectedTab;
         private static bool _showPropPanel;
         private static bool _showActionPanel;
+        private static bool _showRagdollPanel;
 
         private static ListRequest _packageListRequest;
         private static string _sdkVersion;
@@ -49,14 +51,26 @@ namespace mtion.room.sdk
         private static GUIStyle _listHeaderStyle;
         private static GUIStyle _textFieldStyle;
         private static GUIStyle _labelStyle;
+        private static GUIStyle _boxHeaderStyle;
+        private static GUIStyle _successLabelStyle;
+        private static GUIStyle _errorLabelStyle;
+
+        private static readonly Color LineColor = new Color(0.4f, 0.4f, 0.4f);
+        private static readonly Color ButtonColor = new Color(0.067f, 0.067f, 0.067f);
+        private static readonly Color ActiveButtonColor = new Color(0.168f, 0.753f, 0.984f);
+        private static readonly Color TextFieldBackgroundColor = new Color(0.317f, 0.317f, 0.317f);
+        private static readonly Color BoxBackgroundColor = new Color(0.14f, 0.14f, 0.14f);
 
         public static GUIStyle SmallButtonStyle => _smallButtonStyle;
         public static GUIStyle MediumButtonStyle => _mediumButtonStyle;
         public static GUIStyle LargeButtonStyle => _largeButtonStyle;
         public static GUIStyle FoldoutStyle => _foldoutStyle;
+        public static GUIStyle BoxHeaderStyle => _boxHeaderStyle;
         public static GUIStyle ListHeaderStyle => _listHeaderStyle;
         public static GUIStyle TextFieldStyle => _textFieldStyle;
         public static GUIStyle LabelStyle => _labelStyle;
+        public static GUIStyle SuccessLabelStyle => _successLabelStyle;
+        public static GUIStyle ErrorLabelStyle => _errorLabelStyle;
 
         [MenuItem("MTION SDK/SDK Tools")]
         public static void Init()
@@ -114,24 +128,24 @@ namespace mtion.room.sdk
             _headerStyle.fontSize = 24;
 
             _lineStyle = new GUIStyle();
-            _lineStyle.normal.background = CreateTextureForColor(1, 1, new Color(0.4f, 0.4f, 0.4f));
+            _lineStyle.normal.background = CreateTextureForColor(1, 1, LineColor);
 
             _toolbarButtonStyle = new GUIStyle(EditorStyles.toolbarButton);
             _toolbarButtonStyle.fontSize = 16;
             _toolbarButtonStyle.fixedHeight = 24;
             _toolbarButtonStyle.normal.textColor = Color.white;
-            _toolbarButtonStyle.normal.background = CreateTextureForColor(1, 1, new Color(0.067f, 0.067f, 0.067f));
+            _toolbarButtonStyle.normal.background = CreateTextureForColor(1, 1, ButtonColor);
             _toolbarButtonStyle.margin = new RectOffset(5, 5, 0, 0);
 
             _toolbarButtonSelectedStyle = new GUIStyle(_toolbarButtonStyle);
-            _toolbarButtonSelectedStyle.normal.background = CreateTextureForColor(1, 1, new Color(0.168f, 0.753f, 0.984f));
+            _toolbarButtonSelectedStyle.normal.background = CreateTextureForColor(1, 1, ActiveButtonColor);
 
             _smallButtonStyle = new GUIStyle(GUI.skin.button);
             _smallButtonStyle.fixedHeight = 20;
             _smallButtonStyle.fontSize = 14;
             _smallButtonStyle.fontStyle = FontStyle.Bold;
             _smallButtonStyle.normal.textColor = Color.white;
-            _smallButtonStyle.normal.background = CreateTextureForColor(1, 1, new Color(0.067f, 0.067f, 0.067f));
+            _smallButtonStyle.normal.background = CreateTextureForColor(1, 1, ButtonColor);
 
             _mediumButtonStyle = new GUIStyle(_smallButtonStyle);
             _mediumButtonStyle.fixedHeight = 30;
@@ -151,11 +165,25 @@ namespace mtion.room.sdk
             _listHeaderStyle.normal.textColor = Color.white;
 
             _textFieldStyle = new GUIStyle(EditorStyles.textField);
-            _textFieldStyle.normal.background = MTIONSDKToolsWindow.CreateTextureForColor(1, 1, new Color(0.317f, 0.317f, 0.317f));
+            _textFieldStyle.normal.background = CreateTextureForColor(1, 1, TextFieldBackgroundColor);
             _textFieldStyle.normal.textColor = Color.white;
 
             _labelStyle = new GUIStyle(EditorStyles.label);
             _labelStyle.normal.textColor = Color.white;
+
+            _boxHeaderStyle = new GUIStyle();
+            _boxHeaderStyle.alignment = TextAnchor.MiddleLeft;
+            _boxHeaderStyle.fontStyle = FontStyle.Bold;
+            _boxHeaderStyle.normal.textColor = Color.white;
+            _boxHeaderStyle.fontSize = 16;
+
+            _successLabelStyle = new GUIStyle(EditorStyles.label);
+            _successLabelStyle.normal.textColor = Color.green;
+            _successLabelStyle.alignment = TextAnchor.MiddleLeft;
+
+            _errorLabelStyle = new GUIStyle(EditorStyles.label);
+            _errorLabelStyle.normal.textColor = Color.red;
+            _errorLabelStyle.alignment = TextAnchor.MiddleLeft;
         }
 
         private void LoadAllIcons()
@@ -249,6 +277,12 @@ namespace mtion.room.sdk
                     _selectedTab = Tabs.ACTIONS;
                     MTIONSDKToolsActionTab.Refresh();
                 }
+                else if (_showRagdollPanel && GUILayout.Button("Ragdoll", _selectedTab == Tabs.RAGDOLL
+                    ? _toolbarButtonSelectedStyle
+                    : _toolbarButtonStyle))
+                {
+                    _selectedTab = Tabs.RAGDOLL;
+                }
                 else if (GUILayout.Button("Help", _selectedTab == Tabs.HELP
                     ? _toolbarButtonSelectedStyle
                     : _toolbarButtonStyle))
@@ -276,6 +310,9 @@ namespace mtion.room.sdk
                     break;
                 case Tabs.OPTIMIZATION:
                     break;
+                case Tabs.RAGDOLL:
+                    MTIONSDKToolsRagdollTab.Draw();
+                    break;
                 case Tabs.HELP:
                     MTIONSDKToolsHelpTab.Draw();
                     break;
@@ -289,15 +326,41 @@ namespace mtion.room.sdk
             {
                 _showPropPanel = false;
                 _showActionPanel = false;
+                _showRagdollPanel = false;
             }
             else
             {
                 _showPropPanel = descriptorObject.ObjectType == MTIONObjectType.MTIONSDK_ROOM;
-                _showActionPanel = descriptorObject.ObjectType == MTIONObjectType.MTIONSDK_ASSET;
+                _showActionPanel = descriptorObject.ObjectType == MTIONObjectType.MTIONSDK_ASSET ||
+                    descriptorObject.ObjectType == MTIONObjectType.MTIONSDK_AVATAR;
+                _showRagdollPanel = descriptorObject.ObjectType == MTIONObjectType.MTIONSDK_AVATAR;
             }
         }
 
         #region UTILITY
+
+        public static void StartBox()
+        {
+            GUIStyle modifiedBox = GUI.skin.GetStyle("Box");
+            modifiedBox.normal.background = CreateTextureForColor(1, 1, BoxBackgroundColor);
+
+            EditorGUILayout.BeginHorizontal(modifiedBox);
+            GUILayout.Label(string.Empty, GUILayout.MaxWidth(5));
+
+            EditorGUILayout.BeginVertical();
+            GUILayout.Label(string.Empty, GUILayout.MaxHeight(5));
+        }
+
+        public static void EndBox()
+        {
+            GUILayout.Label(string.Empty, GUILayout.MaxHeight(5));
+            EditorGUILayout.EndVertical();
+
+            GUILayout.Label(string.Empty, GUILayout.MaxWidth(5));
+            EditorGUILayout.EndHorizontal();
+
+            GUILayout.Label(string.Empty, GUILayout.MaxHeight(5));
+        }
 
         public static Texture2D CreateTextureForColor(int width, int height, Color col)
         {
