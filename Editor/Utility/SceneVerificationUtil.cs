@@ -111,5 +111,16 @@ namespace mtion.room.sdk
             var avatarRagdoll = descriptor.ObjectReference.GetComponentInChildren<MTIONAvatarRagdoll>();
             return avatarRagdoll != null;
         }
+
+        public static int GetBuildObjectCountInScene()
+        {
+            var descriptor = GameObject.FindFirstObjectByType<MTIONSDKDescriptorSceneBase>();
+            if (descriptor != null && descriptor.ObjectReference != null)
+            {
+                return descriptor.ObjectReference.transform.childCount;
+            }
+
+            return 0;
+        }
     }
 }

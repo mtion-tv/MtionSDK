@@ -23,7 +23,6 @@ namespace mtion.room
 
         public void OnCollisionEnter(Collision collision)
         {
-
             OnCollision?.Invoke(_rigidbody, collision);
         }
 

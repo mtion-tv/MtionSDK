@@ -616,6 +616,7 @@ namespace mtion.room.sdk
             _buildErrorsExist |= GenerateIncorrectNumCamerasError();
             _buildErrorsExist |= GenerateMissingColliderOnRigidbodyError();
             _buildErrorsExist |= RemoveEventSystemsError();
+            _buildErrorsExist |= GenerateNoBuildObjectsDetected();
             GenerateMissingRagdollAvatarWarning();
             GenerateInvalidUnityEventActionWarnings();
             GenerateDuplicatePropertyNameWarnings();
@@ -691,6 +692,22 @@ namespace mtion.room.sdk
             }
 
             return eventSystems.Length > 0;
+        }
+
+        private static bool GenerateNoBuildObjectsDetected()
+        {
+            int buildObjectCount = SceneVerificationUtil.GetBuildObjectCountInScene();
+            if (buildObjectCount <= 1)
+            {
+                var warningMessage = $"Nothing to build in scene. Add gameobjects and rebuild.";
+
+                MTIONSDKToolsWindow.StartBox();
+                MTIONSDKToolsWindow.DrawWarning(warningMessage, MTIONSDKToolsWindow.WarningType.ERROR);
+                MTIONSDKToolsWindow.EndBox();
+
+            }
+
+            return buildObjectCount <= 1;
         }
 
         private static void GenerateInvalidUnityEventActionWarnings()

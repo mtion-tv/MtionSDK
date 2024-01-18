@@ -36,11 +36,13 @@ namespace mtion.room.sdk
 
         private static ListRequest _packageListRequest;
         private static string _sdkVersion;
+        private static string _supportedUnityVersion;
         private static Texture2D _logoIcon;
         private static Texture2D _warningIcon;
         private static Texture2D _errorIcon;
 
         private static GUIStyle _headerStyle;
+        private static GUIStyle _headerStyleCenter;
         private static GUIStyle _lineStyle;
         private static GUIStyle _toolbarButtonStyle;
         private static GUIStyle _toolbarButtonSelectedStyle;
@@ -94,7 +96,22 @@ namespace mtion.room.sdk
         {
             InitializeStyles();
             UpdateTabsToDisplay();
+
             DrawWindowHeader();
+
+            if (string.IsNullOrEmpty(_supportedUnityVersion))
+            {
+                DrawLoadingContent();
+                return;
+            }
+
+
+            if (string.Compare(_supportedUnityVersion, Application.unityVersion) != 0)
+            {
+                DrawUnityVersionWarning();
+                return;
+            }
+
             DrawTabButtons();
             DrawTabContent();
         }
@@ -126,6 +143,11 @@ namespace mtion.room.sdk
             _headerStyle = new GUIStyle();
             _headerStyle.normal.textColor = Color.white;
             _headerStyle.fontSize = 24;
+
+            _headerStyleCenter = new GUIStyle();
+            _headerStyleCenter.normal.textColor = Color.white;
+            _headerStyleCenter.fontSize = 24;
+            _headerStyleCenter.alignment = TextAnchor.MiddleCenter;
 
             _lineStyle = new GUIStyle();
             _lineStyle.normal.background = CreateTextureForColor(1, 1, LineColor);
@@ -200,6 +222,7 @@ namespace mtion.room.sdk
             {
                 var manifest = JsonConvert.DeserializeObject<Dictionary<string, object>>(packageInfoFile.text);
                 _sdkVersion = (string)manifest["version"];
+                _supportedUnityVersion = (string)manifest["supportedVersion"];
             }
             else
             {
@@ -222,11 +245,64 @@ namespace mtion.room.sdk
                     if (package.name.Equals("com.mtion.sdk"))
                     {
                         _sdkVersion = package.version;
+
+                        var path = Path.Combine(package.resolvedPath, "package.json").Replace("\\", "/");
+                        var packageInfoFile = File.ReadAllText(path);
+                        if (packageInfoFile != null)
+                        {
+                            var manifest = JsonConvert.DeserializeObject<Dictionary<string, object>>(packageInfoFile);
+                            _supportedUnityVersion = (string)manifest["supportedVersion"];
+                        }
+
                     }
                 }
             }
 
             EditorApplication.update -= GetSDKVersionCallback;
+        }
+
+        private void DrawLoadingContent()
+        {
+            GUILayout.Space(150);
+            GUILayout.BeginHorizontal();
+            {
+                GUILayout.Space(64);
+                GUILayout.Label($"Initializing Unity for SDK", _headerStyleCenter);
+                GUILayout.Space(64);
+            }
+            GUILayout.EndHorizontal();
+        }
+
+        private void DrawUnityVersionWarning()
+        {
+            GUILayout.Space(150);
+            GUILayout.BeginHorizontal();
+            {
+                GUILayout.Space(64);
+                GUILayout.Label($"Incompatible unity version detected", _headerStyleCenter);
+                GUILayout.Space(64);
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.Space(16);
+            GUILayout.BeginHorizontal();
+            {
+                GUILayout.Space(64);
+                GUILayout.Label($"Version {_supportedUnityVersion} is required for the SDK", _headerStyleCenter);
+                GUILayout.Space(64);
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.Space(16);
+            GUILayout.BeginHorizontal();
+            {
+                GUILayout.Space(64);
+                if (GUILayout.Button($"Click here to download {_supportedUnityVersion}", _largeButtonStyle))
+                {
+                    Application.OpenURL("https://unity.com/releases/editor/archive");
+                }
+                GUILayout.Space(64);
+            }
+            GUILayout.EndHorizontal();
         }
 
         private void DrawWindowHeader()
