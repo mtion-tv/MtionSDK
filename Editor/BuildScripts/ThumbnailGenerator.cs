@@ -64,6 +64,7 @@ namespace mtion.room.sdk
 
             RenderTexture.active = rt;
             Texture2D snapshot = new Texture2D(ThumbnailResWidth, ThumbnailResHeight, TextureFormat.RGB24, false);
+            snapshot.name = $"Snapshoot-{filename}";
             snapshot.ReadPixels(new Rect(0, 0, ThumbnailResWidth, ThumbnailResHeight), 0, 0);
 
             camera.targetTexture = null;
@@ -71,6 +72,7 @@ namespace mtion.room.sdk
             GameObject.DestroyImmediate(rt);
 
             WriteSnapshotToFile(snapshot, directory, filename);
+            GameObject.Destroy(snapshot);
         }
 
         private static void WriteSnapshotToFile(Texture2D snapshot, string directory, string filename)

@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 using System;
 using UnityEngine;
+using System.Collections.Generic;
 
 #if MTION_INTERNAL_BUILD
 using mtion.service.interaction;
@@ -30,14 +31,18 @@ namespace mtion.room.sdk.action
     {
         public override object DefaultValue => null;
     }
-
-
+    
     [Serializable]
     public class BoolMetadata : TypeMetadata
     {
         public override object DefaultValue => false;
     }
 
+    [Serializable]
+    public class EnumMetadata : TypeMetadata
+    {
+        public override object DefaultValue => 0;
+    }
 
     [Serializable]
     public class ContainerMetadata : TypeMetadata
@@ -52,6 +57,7 @@ namespace mtion.room.sdk.action
     {
         public int TotalLength = -1;
         public string Default = "interlinked";
+        public List<string> Options = new List<string>();
         
         public override object DefaultValue => Default;
     }
@@ -116,9 +122,17 @@ namespace mtion.room.sdk.action
         public static ParameterType GetParameterType(string parameterType)
         {
             Type expectedType = Type.GetType(parameterType);
-            if (TypeConversion.NumericConverter.IsNumericType(expectedType))
+            if (expectedType.IsEnum)
+            {
+                return service.interaction.ParameterType.ENUM;
+            }
+            else if (TypeConversion.NumericConverter.IsNumericType(expectedType))
             {
                 return service.interaction.ParameterType.NUMBER;
+            }
+            else if (Type.GetTypeCode(expectedType) == TypeCode.Boolean)
+            {
+                return service.interaction.ParameterType.BOOLEAN;
             }
             return service.interaction.ParameterType.STRING;
         }

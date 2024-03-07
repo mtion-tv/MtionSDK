@@ -97,7 +97,7 @@ namespace mtion.room.sdk
 
             var lightComponent = instance_.gameObject.GetComponent<Light>();
             
-            LightType unityType = instance_.LightParams.LightType == LightingComponentType.PointLight ? LightType.Point : LightType.Spot;
+            LightType unityType = instance_.LightParams.LightType == LightingComponentType.POINT_LIGHT ? LightType.Point : LightType.Spot;
             if (lightComponent.type != unityType)
             {
                 lightComponent.type = unityType;

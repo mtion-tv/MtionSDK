@@ -19,6 +19,12 @@ namespace mtion.room
         {
             while (true)
             {
+                if (Paused)
+                {
+                    yield return null;
+                    continue;
+                }
+                
                 if (!_agent.isOnNavMesh)
                 {
                     yield return null;

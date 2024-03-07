@@ -1,4 +1,5 @@
 using mtion.room.sdk.action;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -8,19 +9,15 @@ namespace mtion.room
 {
     [AddComponentMenu("mtion/Nav Mesh Agent")]
     [RequireComponent(typeof(NavMeshAgentLinkMover))]
-    [RequireComponent(typeof(NavMeshAgentAnimator))]
     [RequireComponent(typeof(NavMeshAgent))]
+    [RequireComponent(typeof(NavMeshAgentRandomMovement))]
+    [RequireComponent(typeof(NavMeshAgentTargetMovement))]
+    [RequireComponent(typeof(NavMeshAgentPositionMovement))]
     [DisallowMultipleComponent]
     public sealed class MTIONNavMeshAgent : MTIONComponent
     {
-        [Header("Movement")]
-        [SerializeField] private float _maxJumpDistance = 5f;
-
-        [Header("Animations")]
-        [SerializeField] private AnimationClip _idleAnimation;
-        [SerializeField] private AnimationClip _jumpAnimation;
-        [SerializeField] private AnimationClip _walkAnimation;
-
+        #region private attributes
+        
         [SerializeField, HideInInspector]
         private int _version;
 
@@ -29,12 +26,30 @@ namespace mtion.room
         private NavMeshAgentTargetMovement _targetMovement;
         private NavMeshAgentPositionMovement _positionMovement;
         private NavMeshAgentLinkMover _linkMover;
-        private NavMeshAgentAnimator _navMeshAnimator;
-        private NavMeshAgent _agent;
+        
+        #endregion
 
-        private bool _walkAnimationOverride;
-
+        #region public properties
+        
         public int Version => _version;
+        public NavMeshAgent NavMeshAgent { get; private set; }
+
+        public float MovingSpeed
+        {
+            get
+            {
+                return NavMeshAgent.speed;
+            }
+            set
+            {
+                NavMeshAgent.speed = value;
+                NavMeshAgent.acceleration = 2 * value;
+            }
+        }
+        
+        #endregion
+
+        #region Unity Events
 
         private void Awake()
         {
@@ -42,60 +57,41 @@ namespace mtion.room
             _targetMovement = GetComponent<NavMeshAgentTargetMovement>();
             _positionMovement = GetComponent<NavMeshAgentPositionMovement>();
             _linkMover = GetComponent<NavMeshAgentLinkMover>();
-            _navMeshAnimator = GetComponent<NavMeshAgentAnimator>();
-            _agent = GetComponent<NavMeshAgent>();
+            NavMeshAgent = GetComponent<NavMeshAgent>();
         }
 
-        private void Start()
+        private void OnDisable()
         {
-            _activeMovement = _randomMovement;
-
-            _navMeshAnimator.SetAnimationClips(_idleAnimation, _jumpAnimation, _walkAnimation);
-
-            _linkMover.SetMaxJumpDistance(_maxJumpDistance);
-
-            _linkMover.OnLinkJumpBegin += () =>
-            {
-                _navMeshAnimator.PlayJumpAnimation(true);
-            };
-
-            _linkMover.OnLinkJumpEnd += () =>
-            {
-                _navMeshAnimator.PlayJumpAnimation(false);
-            };
-
-            _linkMover.OnLinkWalkBegin += () =>
-            {
-                _navMeshAnimator.PlayWalkAnimation(true);
-                _walkAnimationOverride = true;
-            };
-
-            _linkMover.OnLinkWalkEnd += () =>
-            {
-                _navMeshAnimator.PlayWalkAnimation(false);
-                _walkAnimationOverride = false;
-            };
+            NavMeshAgent.enabled = false;
         }
 
-        private void Update()
+        private void OnEnable()
         {
-            if (_agent.velocity.magnitude > 0f)
-            {
-                _navMeshAnimator.PlayWalkAnimation(true);
-            }
-            else if (!_walkAnimationOverride)
-            {
-                _navMeshAnimator.PlayWalkAnimation(false);
-            }
+            NavMeshAgent.enabled = true;
         }
+
+        #endregion
+
+        #region Public Methods
 
         public void StartMovement()
         {
+            _activeMovement?.StartMovement();
         }
 
         public void StopMovement()
         {
             _activeMovement?.StopMovement();
+        }
+
+        public void PauseMovement()
+        {
+            _activeMovement?.PauseMovement();
+        }
+
+        public void ResumeMovement()
+        {
+            _activeMovement?.ResumeMovement();
         }
 
         public void SetRandomMovement()
@@ -132,5 +128,22 @@ namespace mtion.room
             _activeMovement = _positionMovement;
             _positionMovement.SetPosition(position);
         }
+
+        public void SetJumpHeight(float height)
+        {
+            _linkMover.SetMaxJumpDistance(height);
+        }
+
+        public void SetHyperactivity(float hyperactivity)
+        {
+            _randomMovement.SetHyperactivity(hyperactivity);
+        }
+
+        public void SetOnPointReachedAction(NavMeshAgentMovement.OnPointReachedDelegate action)
+        {
+            _randomMovement.OnPointReached = action;
+        }
+
+        #endregion
     }
 }

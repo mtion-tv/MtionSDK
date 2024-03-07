@@ -2,7 +2,6 @@ using mtion.room;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.AI;
 
 namespace mtion.room
 {
@@ -20,6 +19,12 @@ namespace mtion.room
         {
             while (true)
             {
+                if (Paused)
+                {
+                    yield return null;
+                    continue;
+                }
+                
                 if (!_agent.isOnNavMesh)
                 {
                     yield return null;

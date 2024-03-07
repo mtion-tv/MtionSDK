@@ -36,8 +36,10 @@ namespace mtion.room.sdk.action
         public string DefaultChatCommand;
 
 
+        public bool Deprecated = false;
         public string ActionName;
         public string ActionDescription;
+        public ActionNodeType ActionNodeType = ActionNodeType.ACTION;
         public bool Active = true;
 
         [HideInInspector]
@@ -45,7 +47,7 @@ namespace mtion.room.sdk.action
 
         public List<ActionEntryPointInternal> ActionEntryPoints = new List<ActionEntryPointInternal>();
         public List<ActionExitPointInternal> ActionExitPoints = new List<ActionExitPointInternal>();
-        [FormerlySerializedAs("ActionExitParameters")] public List<ActionExitParametersProviderInternal> ActionExitParameterProviders = new List<ActionExitParametersProviderInternal>();
+        public List<ActionExitParametersProviderInternal> ActionExitParameterProviders = new List<ActionExitParametersProviderInternal>();
         
         private Dictionary<string, int> _actionEntryMap = new Dictionary<string, int>();
         private Dictionary<string, int> _actionExitMap = new Dictionary<string, int>();
@@ -87,7 +89,11 @@ namespace mtion.room.sdk.action
                         return;
                     }
 
-                    List<object> parameters = TypeConversion.GenerateParameters(input, paramdef);
+                    List<object> parameters = new List<object>();
+                    if (paramdef != null)
+                    {
+                        parameters = TypeConversion.GenerateParameters(input, paramdef);
+                    }
 
                     parameters.Add(actionData.Metadata);
 
@@ -103,6 +109,8 @@ namespace mtion.room.sdk.action
             desc.Guid = Guid;
             desc.ActionName = ActionName;
             desc.ActionDescription = ActionDescription;
+            desc.NodeType = ActionNodeType;
+            desc.Deprecated = Deprecated;
             
             
             desc.ValidEntryPoints = new List<ActionEntryPointInfo>();

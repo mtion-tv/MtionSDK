@@ -1,6 +1,5 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -16,11 +15,14 @@ namespace mtion.room
         private NavMeshAgent _agent;
         private float _maxJumpDistance;
 
-        public event Action OnLinkJumpBegin;
+        public event Action<float, float> OnLinkJumpBegin;
         public event Action OnLinkJumpEnd;
 
         public event Action OnLinkWalkBegin;
         public event Action OnLinkWalkEnd;
+        
+        public bool Running { get; private set; }
+        public Vector3 Velocity { get; private set; }
 
         private void Awake()
         {
@@ -48,9 +50,9 @@ namespace mtion.room
                 _agent.isOnOffMeshLink &&
                 _agent.currentOffMeshLinkData.valid)
             {
-                var validStart = NavMeshUtility.ConvertLinkPosToNavMeshPos(_agent.currentOffMeshLinkData.startPos, out var startPos);
-                var validEnd = NavMeshUtility.ConvertLinkPosToNavMeshPos(_agent.currentOffMeshLinkData.endPos, out var endPos);
-                var distance = Vector3.Distance(startPos, endPos);
+                NavMeshUtility.ConvertLinkPosToNavMeshPos(_agent.currentOffMeshLinkData.startPos, out Vector3 startPos);
+                NavMeshUtility.ConvertLinkPosToNavMeshPos(_agent.currentOffMeshLinkData.endPos, out Vector3 endPos);
+                float distance = Vector3.Distance(startPos, endPos);
 
                 if (distance > _maxJumpDistance)
                 {
@@ -60,11 +62,12 @@ namespace mtion.room
                 yield return StartCoroutine(Walk(_agent.transform.position, startPos));
 
                 var yDistance = Math.Abs(endPos.y - startPos.y);
-                if (yDistance > JUMP_Y_THRESHOLD || 
-                    distance > JUMP_DISTANCE_THRESHOLD)
+                if (yDistance > JUMP_Y_THRESHOLD || distance > JUMP_DISTANCE_THRESHOLD)
                 {
-                    OnLinkJumpBegin?.Invoke();
-                    yield return StartCoroutine(Jump(startPos, endPos));
+                    float jumpDistance = (endPos - startPos).magnitude;
+                    float jumpDuration = jumpDistance/ (_agent.speed * 1.5f);
+                    OnLinkJumpBegin?.Invoke(jumpDistance, jumpDuration);
+                    yield return StartCoroutine(Jump(startPos, endPos, jumpDuration));
                     OnLinkJumpEnd?.Invoke();
                 }
                 else
@@ -80,40 +83,52 @@ namespace mtion.room
 
         private IEnumerator Walk(Vector3 startPos, Vector3 endPos)
         {
-            var distance = Vector3.Distance(startPos, endPos);
+            Vector3 direction = endPos - startPos;
+            Running = true;
+            Velocity = direction.normalized * _agent.speed;
+            var distance = direction.magnitude;
             var duration = distance / _agent.speed;
             var normalizedTime = 0f;
             while (normalizedTime < 1f)
             {
                 _agent.transform.position = Vector3.Lerp(startPos, endPos, normalizedTime);
                 normalizedTime += Time.deltaTime / duration;
+                RotateTowards(direction);
                 yield return null;
             }
+            Running = false;
         }
 
-        private IEnumerator Jump(Vector3 startPos, Vector3 endPos)
+        private IEnumerator Jump(Vector3 startPos, Vector3 endPos, float duration)
         {
-            var duration = 1f;
-            yield return new WaitForSeconds(0.25f);
-
-            var lowerPoint = endPos.y < startPos.y
-                ? endPos
-                : startPos; ;
-            var higherPoint = endPos.y > startPos.y
-                ? endPos
-                : startPos;
-
-            var midPos = new Vector3(lowerPoint.x, higherPoint.y + _agent.height * 2f, lowerPoint.z);
-
-            var normalizedTime = 0f;
+            Vector3 direction = endPos - startPos;
+            Running = true;
+            Velocity = direction / duration;
+            
+            float normalizedTime = 0f;
             while (normalizedTime < 1f)
             {
-                Vector3 m1 = Vector3.Lerp(startPos, midPos, normalizedTime);
-                Vector3 m2 = Vector3.Lerp(midPos, endPos, normalizedTime);
-                _agent.transform.position = Vector3.Lerp(m1, m2, normalizedTime);
+                Vector3 position = Vector3.Lerp(startPos, endPos, normalizedTime);
+                position.y += Mathf.Sin(Mathf.PI * normalizedTime) * _agent.height * .25f;
+                _agent.transform.position = position;
                 normalizedTime += Time.deltaTime / duration;
+                RotateTowards(direction);
                 yield return null;
             }
+
+            _agent.transform.position = endPos;
+            Running = false;
+        }
+
+        private void RotateTowards(Vector3 direction)
+        {
+            direction.y = 0;
+            float desiredAngle = Vector3.SignedAngle(transform.forward, direction, Vector3.up);
+            float sign = Mathf.Sign(desiredAngle);
+
+            float angle = sign * Mathf.Min(MathF.Abs(desiredAngle), _agent.angularSpeed) * Time.deltaTime;
+            
+            transform.Rotate(Vector3.up, angle);
         }
     }
 }

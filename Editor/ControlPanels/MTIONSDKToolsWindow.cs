@@ -20,6 +20,8 @@ namespace mtion.room.sdk
             ACTIONS,
             OPTIMIZATION,
             RAGDOLL,
+            AVATAR_MOVEMENT,
+            AVATAR_ANIMATIONS,
             HELP
         }
 
@@ -33,6 +35,8 @@ namespace mtion.room.sdk
         private static bool _showPropPanel;
         private static bool _showActionPanel;
         private static bool _showRagdollPanel;
+        private static bool _showAvatarMovementPanel;
+        private static bool _showAvatarAnimationsPanel;
 
         private static ListRequest _packageListRequest;
         private static string _sdkVersion;
@@ -130,6 +134,12 @@ namespace mtion.room.sdk
                     break;
                 case Tabs.ACTIONS:
                     MTIONSDKToolsActionTab.Refresh();
+                    break;
+                case Tabs.AVATAR_MOVEMENT:
+                    MTIONSDKToolsAvatarMovementTab.Refresh();
+                    break;
+                case Tabs.AVATAR_ANIMATIONS:
+                    MTIONSDKToolsAvatarAnimationsTab.Refresh();
                     break;
                 case Tabs.OPTIMIZATION:
                     break;
@@ -359,6 +369,20 @@ namespace mtion.room.sdk
                 {
                     _selectedTab = Tabs.RAGDOLL;
                 }
+                else if (_showAvatarMovementPanel && GUILayout.Button("Movement", _selectedTab == Tabs.AVATAR_MOVEMENT
+                             ? _toolbarButtonSelectedStyle
+                             : _toolbarButtonStyle))
+                {
+                    _selectedTab = Tabs.AVATAR_MOVEMENT;
+                    MTIONSDKToolsAvatarMovementTab.Refresh();
+                }
+                else if (_showAvatarAnimationsPanel && GUILayout.Button("Animations", _selectedTab == Tabs.AVATAR_ANIMATIONS
+                    ? _toolbarButtonSelectedStyle
+                    : _toolbarButtonStyle))
+                {
+                    _selectedTab = Tabs.AVATAR_ANIMATIONS;
+                    MTIONSDKToolsAvatarAnimationsTab.Refresh();
+                }
                 else if (GUILayout.Button("Help", _selectedTab == Tabs.HELP
                     ? _toolbarButtonSelectedStyle
                     : _toolbarButtonStyle))
@@ -389,6 +413,12 @@ namespace mtion.room.sdk
                 case Tabs.RAGDOLL:
                     MTIONSDKToolsRagdollTab.Draw();
                     break;
+                case Tabs.AVATAR_MOVEMENT:
+                    MTIONSDKToolsAvatarMovementTab.Draw();
+                    break;
+                case Tabs.AVATAR_ANIMATIONS:
+                    MTIONSDKToolsAvatarAnimationsTab.Draw();
+                    break;
                 case Tabs.HELP:
                     MTIONSDKToolsHelpTab.Draw();
                     break;
@@ -403,6 +433,8 @@ namespace mtion.room.sdk
                 _showPropPanel = false;
                 _showActionPanel = false;
                 _showRagdollPanel = false;
+                _showAvatarMovementPanel = false;
+                _showAvatarAnimationsPanel = false;
             }
             else
             {
@@ -410,6 +442,8 @@ namespace mtion.room.sdk
                 _showActionPanel = descriptorObject.ObjectType == MTIONObjectType.MTIONSDK_ASSET ||
                     descriptorObject.ObjectType == MTIONObjectType.MTIONSDK_AVATAR;
                 _showRagdollPanel = descriptorObject.ObjectType == MTIONObjectType.MTIONSDK_AVATAR;
+                _showAvatarMovementPanel = descriptorObject.ObjectType == MTIONObjectType.MTIONSDK_AVATAR;
+                _showAvatarAnimationsPanel = descriptorObject.ObjectType == MTIONObjectType.MTIONSDK_AVATAR;
             }
         }
 

@@ -199,9 +199,20 @@ namespace mtion.room.sdk.action
 
                 if (!inputType.Equals(expectedType))
                 {
-                    if (NumericConverter.IsNumericType(inputType) && NumericConverter.IsNumericType(expectedType))
+                    if (NumericConverter.IsNumericType(inputType))
                     {
-                        param = NumericConverter.ConvertToNumericValue(param, expectedType);
+                        if (expectedType.IsEnum)
+                        {
+                            param = Enum.ToObject(expectedType, param);
+                        }
+                        else if (NumericConverter.IsNumericType(expectedType))
+                        {
+                            param = NumericConverter.ConvertToNumericValue(param, expectedType);
+                        }
+                        else if (expectedType == typeof(string))
+                        {
+                            param = Convert.ChangeType(param, expectedType);
+                        }
                     }
                     else
                     {

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 
-
 namespace mtion.room.sdk.action
 {
     [Serializable]
@@ -43,11 +42,22 @@ namespace mtion.room.sdk.action
     }
 
     [Serializable]
+    public enum ActionNodeType
+    {
+        ACTION,
+        SETTER,
+        GETTER
+    }
+    
+    [Serializable]
     public sealed class ActionInterfaceDescriptor
     {
+        public bool Deprecated;
+        
         public string Guid;
         public string ActionName;
         public string ActionDescription;
+        public ActionNodeType NodeType;
         public List<ActionEntryPointInfo> ValidEntryPoints = new List<ActionEntryPointInfo>();
         public List<ActionExitPointInfo> ValidExitPoints = new List<ActionExitPointInfo>();
         public List<ActionExitParameterInfo> ValidExitParameters = new List<ActionExitParameterInfo>();
