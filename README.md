@@ -2,9 +2,12 @@
 
 _Build, create, and publish customized clubhouses, assets and experiences._
 
-:rotating_light: All contents generated, do not modify :rotating_light:
+
 
 ## Installation
+
+:rotating_light: Unity Version **2021.3.25f1** Required. [Download Here](https://unity.com/releases/editor/archive) :rotating_light:
+
 
 1. First, make sure Git is installed (https://git-scm.com/)
 2. Open package manager inside Unity
