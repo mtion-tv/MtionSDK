@@ -66,5 +66,14 @@ namespace mtion.room.sdk
         {
             return RunJumpAnimations.GetAnimationClips();
         }
+
+        private void OnValidate()
+        {
+            WalkAnimations.AutoPopulateAnimations();
+            RunAnimations.AutoPopulateAnimations();
+            IdleJumpAnimations.AutoPopulateAnimations();
+            WalkJumpAnimations.AutoPopulateAnimations();
+            RunJumpAnimations.AutoPopulateAnimations();
+        }
     }
 }

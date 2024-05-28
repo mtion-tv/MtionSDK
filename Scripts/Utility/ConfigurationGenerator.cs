@@ -136,6 +136,21 @@ namespace mtion.room.sdk
                 });
         }
 
+        public static bool HasSceneLogicNode(GameObject gameObject)
+        {
+            if (gameObject == null)
+                return false;
+
+            MonoBehaviour[] components = gameObject.GetComponentsInChildren<MonoBehaviour>(true);
+            foreach (MonoBehaviour component in components)
+            {
+                if (component is ISceneLogcNode)
+                    return true;
+            }
+
+            return false;
+        }
+
         public static string ConvertSDKAssetToJsonString(MTIONSDKAssetBase descriptor, UserSdkAuthentication userAuth)
         {
             string version = "0.0.0";
@@ -181,8 +196,13 @@ namespace mtion.room.sdk
             {
                 var rb = updatedGO.GetComponentInChildren<Rigidbody>();
                 model.HasPhysics = rb != null
-                    ? AssetConfigurationFile.HasPhysicsSetting.TRUE
-                    : AssetConfigurationFile.HasPhysicsSetting.FALSE;
+                    ? AssetConfigurationFile.HasSetting.TRUE
+                    : AssetConfigurationFile.HasSetting.FALSE;
+
+                model.IsSceneLogicNode = HasSceneLogicNode(updatedGO.gameObject) 
+                    ? AssetConfigurationFile.HasSetting.TRUE
+                    : AssetConfigurationFile.HasSetting.FALSE;
+
             }
 
             var actionDataGroup = new List<ActionData>();

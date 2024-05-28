@@ -4,7 +4,7 @@ using UnityEngine;
 using System.Collections.Generic;
 
 #if MTION_INTERNAL_BUILD
-using mtion.service.interaction;
+using mtion.service.api;
 #endif
 
 namespace mtion.room.sdk.action
@@ -124,17 +124,21 @@ namespace mtion.room.sdk.action
             Type expectedType = Type.GetType(parameterType);
             if (expectedType.IsEnum)
             {
-                return service.interaction.ParameterType.ENUM;
+                return service.api.ParameterType.ENUM;
             }
             else if (TypeConversion.NumericConverter.IsNumericType(expectedType))
             {
-                return service.interaction.ParameterType.NUMBER;
+                return service.api.ParameterType.NUMBER;
             }
             else if (Type.GetTypeCode(expectedType) == TypeCode.Boolean)
             {
-                return service.interaction.ParameterType.BOOLEAN;
+                return service.api.ParameterType.BOOLEAN;
             }
-            return service.interaction.ParameterType.STRING;
+            else if (expectedType == typeof(GameObject))
+            {
+                return service.api.ParameterType.GAMEOBJECT;
+            }
+            return service.api.ParameterType.STRING;
         }
 #endif 
 

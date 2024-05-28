@@ -20,16 +20,22 @@ namespace mtion.room.sdk
 
         public AnimationClip[] GetAnimationClips()
         {
-            if (MoveForward == null || MoveBackward == null 
-                                    || MoveLeft == null || MoveRight == null)
+            AnimationClip firstNonNullClip = null;
+            if (MoveForward != null) firstNonNullClip = MoveForward;
+            else if (MoveBackward != null) firstNonNullClip = MoveBackward;
+            else if (MoveLeft != null) firstNonNullClip = MoveLeft;
+            else if (MoveRight != null) firstNonNullClip = MoveRight;
+
+            if (firstNonNullClip == null)
             {
                 return null;
             }
+
             List<AnimationClip> animations = new List<AnimationClip>(8);
-            animations.Add(MoveForward);
-            animations.Add(MoveBackward);
-            animations.Add(MoveLeft);
-            animations.Add(MoveRight);
+            animations.Add(MoveForward != null ? MoveForward : firstNonNullClip);
+            animations.Add(MoveBackward != null ? MoveBackward : firstNonNullClip);
+            animations.Add(MoveLeft != null ? MoveLeft : firstNonNullClip);
+            animations.Add(MoveRight != null ? MoveRight : firstNonNullClip);
             if (MoveForwardLeft && MoveForwardRight && MoveBackwardLeft && MoveBackwardRight)
             {
                 animations.Add(MoveForwardLeft);
@@ -39,6 +45,16 @@ namespace mtion.room.sdk
             }
 
             return animations.ToArray();
+        }
+
+        public void AutoPopulateAnimations()
+        {
+            if (MoveForward != null)
+            {
+                if (MoveBackward == null) MoveBackward = MoveForward;
+                if (MoveLeft == null) MoveLeft = MoveForward;
+                if (MoveRight == null) MoveRight = MoveForward;
+            }
         }
     }
 }

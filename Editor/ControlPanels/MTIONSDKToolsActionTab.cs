@@ -180,7 +180,8 @@ public static class MTIONSDKToolsActionTab
                         actionparams.Metadata = new ContainerMetadata();
                     }
                 }
-                else if (parameterInfo[i].ParameterType == typeof(Object))
+                else if (parameterInfo[i].ParameterType == typeof(Object) ||
+                         parameterInfo[i].ParameterType == typeof(GameObject))
                 {
                     if (actionparams.Metadata == null ||
                         actionparams.Metadata.GetType() != typeof(ObjectMetadata))
