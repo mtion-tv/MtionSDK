@@ -234,6 +234,10 @@ namespace mtion.room.sdk.action
                         StringMetadata stringMetadata = paramInfo.Metadata.Cast<StringMetadata>();
                         param = stringMetadata.Default;
                     }
+                    else if (expectedType == typeof(GameObject) && paramInfo.Metadata.Is<ObjectMetadata>())
+                    {
+                        param = null;
+                    }
                     else
                     {
                         param = Activator.CreateInstance(expectedType);

@@ -617,6 +617,7 @@ namespace mtion.room.sdk
             _buildErrorsExist |= GenerateMissingColliderOnRigidbodyError();
             _buildErrorsExist |= RemoveEventSystemsError();
             _buildErrorsExist |= GenerateNoBuildObjectsDetected();
+            _buildErrorsExist |= GenerateMissingAnimatorAvatarError();
             GenerateMissingRagdollAvatarWarning();
             GenerateInvalidUnityEventActionWarnings();
             GenerateDuplicatePropertyNameWarnings();
@@ -708,6 +709,21 @@ namespace mtion.room.sdk
             }
 
             return buildObjectCount <= 1;
+        }
+
+        private static bool GenerateMissingAnimatorAvatarError()
+        {
+            var avatarHasAnimator = SceneVerificationUtil.AvatarHasAnimator();
+            if (!avatarHasAnimator)
+            {
+                var warningMessage = $"This avatar is missing an animator. Please add an animator component before exporting.";
+
+                MTIONSDKToolsWindow.StartBox();
+                MTIONSDKToolsWindow.DrawWarning(warningMessage, MTIONSDKToolsWindow.WarningType.ERROR);
+                MTIONSDKToolsWindow.EndBox();
+            }
+
+            return !avatarHasAnimator;
         }
 
         private static void GenerateInvalidUnityEventActionWarnings()
