@@ -175,7 +175,8 @@ namespace mtion.room.sdk.compiled
                     });
                     resourceTask.Wait();
 
-                    if (resource == null)
+                    var ownerId = SDKServerManager.UserId;
+                    if (resource == null || resource.OwnerId != ownerId)
                     {
                         asset.GenerateNewGUID(asset.GUID);
                         EditorUtility.SetDirty(asset);
@@ -222,7 +223,8 @@ namespace mtion.room.sdk.compiled
                     });
                     resourceTask.Wait();
 
-                    if (resource == null)
+                    var ownerId = SDKServerManager.UserId;
+                    if (resource == null || resource.OwnerId != ownerId)
                     {
                         asset.GenerateNewGUID(asset.GUID);
                         EditorUtility.SetDirty(asset);
