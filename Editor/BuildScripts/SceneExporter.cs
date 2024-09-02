@@ -79,7 +79,8 @@ namespace mtion.room.sdk
 
             });
             resourceTask.Wait();
-            if (resource == null)
+            var ownerId = SDKServerManager.UserId;
+            if (resource == null || resource.OwnerId != ownerId)
             {
                 asset.GenerateNewGUID(asset.GUID);
                 EditorUtility.SetDirty(asset);
@@ -113,7 +114,8 @@ namespace mtion.room.sdk
                 });
                 blueprintTask.Wait();
 
-                if (resource == null)
+                var ownerId = SDKServerManager.UserId;
+                if (resource == null || resource.OwnerId != ownerId)
                 {
                     blueprintDescriptor.GenerateNewGUID(blueprintDescriptor.GUID);
                     EditorUtility.SetDirty(blueprintDescriptor);
@@ -131,7 +133,8 @@ namespace mtion.room.sdk
 
                 });
                 roomTask.Wait();
-                if (resource == null)
+                var ownerId = SDKServerManager.UserId;
+                if (resource == null || resource.OwnerId != ownerId)
                 {
                     roomDescriptor.GenerateNewGUID(roomDescriptor.GUID);
                     EditorUtility.SetDirty(roomDescriptor);
@@ -148,7 +151,8 @@ namespace mtion.room.sdk
 
                 });
                 envTask.Wait();
-                if (resource == null)
+                var ownerId = SDKServerManager.UserId;
+                if (resource == null || resource.OwnerId != ownerId)
                 {
                     environmentDescriptor.GenerateNewGUID(environmentDescriptor.GUID);
                     roomDescriptor.EnvironmentInternalID = environmentDescriptor.GUID;
@@ -223,7 +227,8 @@ namespace mtion.room.sdk
 
             });
             resourceTask.Wait();
-            if (resource == null)
+            var ownerId = SDKServerManager.UserId;
+            if (resource == null || resource.OwnerId != ownerId)
             {
                 roomDescriptor.GenerateNewGUID(roomDescriptor.GUID);
                 EditorUtility.SetDirty(roomDescriptor);
@@ -281,7 +286,8 @@ namespace mtion.room.sdk
 
             });
             resourceTask.Wait();
-            if (resource == null)
+            var ownerId = SDKServerManager.UserId;
+            if (resource == null || resource.OwnerId != ownerId)
             {
                 environmentDescriptor.GenerateNewGUID(environmentDescriptor.GUID);
             }

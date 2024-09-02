@@ -44,7 +44,8 @@ namespace mtion.room.sdk
 
             });
             resourceTask.Wait();
-            if (resource == null)
+            var ownerId = SDKServerManager.UserId;
+            if (resource == null || resource.OwnerId != ownerId)
             {
                 assetBase.GenerateNewGUID(assetBase.GUID);
                 EditorUtility.SetDirty(assetBase);
