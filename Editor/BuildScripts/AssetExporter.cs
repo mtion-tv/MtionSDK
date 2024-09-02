@@ -1,4 +1,5 @@
 using mtion.room.sdk.compiled;
+using mtion.service.api;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -6,6 +7,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using UnityEditor;
 using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Build;
@@ -34,6 +36,20 @@ namespace mtion.room.sdk
             {
                 throw new ArgumentNullException();
             }
+
+            Resource resource = null;
+            var resourceTask = Task.Run(async () =>
+            {
+                resource = await SDKServerManager.GetResourceById(assetBase.GUID);
+
+            });
+            resourceTask.Wait();
+            if (resource == null)
+            {
+                assetBase.GenerateNewGUID(assetBase.GUID);
+                EditorUtility.SetDirty(assetBase);
+            }
+
 
             if (assetBase.ObjectType == MTIONObjectType.MTIONSDK_ENVIRONMENT ||
                 assetBase.ObjectType == MTIONObjectType.MTIONSDK_ROOM)
