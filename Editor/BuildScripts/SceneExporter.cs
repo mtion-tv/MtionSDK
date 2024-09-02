@@ -50,7 +50,7 @@ namespace mtion.room.sdk
                     break;
 
                 case MTIONObjectType.MTIONSDK_ASSET:
-                    ExportAssetScene();
+                    ExportAssetScene(MTIONObjectType.MTIONSDK_ASSET);
                     break;
 
                 case MTIONObjectType.MTIONSDK_ROOM:
@@ -62,28 +62,49 @@ namespace mtion.room.sdk
                     break;
 
                 case MTIONObjectType.MTIONSDK_AVATAR:
-                    ExportAssetScene();
+                    ExportAssetScene(MTIONObjectType.MTIONSDK_AVATAR);
                     break;
             }
         }
 
-        private void ExportAssetScene()
+        private void ExportAssetScene(MTIONObjectType objectType)
         {
             SDKServerManager.Init();
-            MTIONSDKAsset asset = sceneObjectDescriptor as MTIONSDKAsset;
-            
-            Resource resource = null;
-            var resourceTask = Task.Run(async () =>
-            {
-                resource = await SDKServerManager.GetResourceById(asset.GUID);
 
-            });
-            resourceTask.Wait();
-            var ownerId = SDKServerManager.UserId;
-            if (resource == null || resource.OwnerId != ownerId)
+            if (objectType == MTIONObjectType.MTIONSDK_ASSET)
             {
-                asset.GenerateNewGUID(asset.GUID);
-                EditorUtility.SetDirty(asset);
+                MTIONSDKAsset asset = sceneObjectDescriptor as MTIONSDKAsset;
+
+                Resource resource = null;
+                var resourceTask = Task.Run(async () =>
+                {
+                    resource = await SDKServerManager.GetResourceById(asset.GUID);
+
+                });
+                resourceTask.Wait();
+                var ownerId = SDKServerManager.UserId;
+                if (resource == null || resource.OwnerId != ownerId)
+                {
+                    asset.GenerateNewGUID(asset.GUID);
+                    EditorUtility.SetDirty(asset);
+                }
+            }
+            else if (objectType == MTIONObjectType.MTIONSDK_AVATAR)
+            {
+                MTIONSDKAvatar asset = sceneObjectDescriptor as MTIONSDKAvatar;
+                Resource resource = null;
+                var resourceTask = Task.Run(async () =>
+                {
+                    resource = await SDKServerManager.GetResourceById(asset.GUID);
+
+                });
+                resourceTask.Wait();
+                var ownerId = SDKServerManager.UserId;
+                if (resource == null || resource.OwnerId != ownerId)
+                {
+                    asset.GenerateNewGUID(asset.GUID);
+                    EditorUtility.SetDirty(asset);
+                }
             }
 
             SceneVerificationUtil.VerifySceneIntegrity(sceneObjectDescriptor);
