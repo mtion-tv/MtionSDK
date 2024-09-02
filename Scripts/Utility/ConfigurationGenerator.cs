@@ -26,12 +26,12 @@ namespace mtion.room.sdk
 
         public static string ConvertSDKSceneToJsonString(
             MTIONSDKDescriptorSceneBase descriptor,
-            UserSdkAuthentication userAuth,
             MVirtualCameraEventTracker[] cameras,
             MVirtualDisplayTracker[] displays,
             MVirtualLightingTracker[] lights,
             MVirtualAssetTracker[] assetTrackers,
-            MVirtualAvatarTracker[] avatarTrackers)
+            MVirtualAvatarTracker[] avatarTrackers,
+            string thumbnailMediaId)
         {
             SceneConfigurationFile model = new SceneConfigurationFile();
 
@@ -51,17 +51,11 @@ namespace mtion.room.sdk
                 version = manifest.version;
             }
 #endif
-
-            model.OwnerGUID = userAuth.GetUserGUID();
-            model.OwnerEmail = userAuth.GetUserEmail();
-
+            
             model.SceneType = descriptor.ObjectType;
             model.Name = descriptor.Name;
             model.GUID = descriptor.InternalID;
-            model.S3URI = SDKUtil.GenerateServerURI(
-                userAuth.GetUserGUID(),
-                descriptor.InternalID,
-                descriptor.ObjectType);
+            model.ThumbnailMediaId = thumbnailMediaId;
             model.Version = descriptor.Version;
             model.InternalVersion = version;
             var unixTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -151,7 +145,7 @@ namespace mtion.room.sdk
             return false;
         }
 
-        public static string ConvertSDKAssetToJsonString(MTIONSDKAssetBase descriptor, UserSdkAuthentication userAuth)
+        public static string ConvertSDKAssetToJsonString(MTIONSDKAssetBase descriptor)
         {
             string version = "0.0.0";
 
@@ -171,17 +165,10 @@ namespace mtion.room.sdk
 #endif
 
             AssetConfigurationFile model = new AssetConfigurationFile();
-
-            model.OwnerGUID = userAuth.GetUserGUID();
-            model.OwnerEmail = userAuth.GetUserEmail();
-
+            
             model.SceneType = descriptor.ObjectType;
             model.Name = descriptor.Name;
             model.GUID = descriptor.InternalID;
-            model.S3URI = SDKUtil.GenerateServerURI(
-                userAuth.GetUserGUID(),
-                descriptor.InternalID,
-                descriptor.ObjectType);
             model.Version = descriptor.Version;
             model.InternalVersion = version;
             var unixTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -194,12 +181,12 @@ namespace mtion.room.sdk
 
             if (descriptor.ObjectType == MTIONObjectType.MTIONSDK_ASSET)
             {
-                var rb = updatedGO.GetComponentInChildren<Rigidbody>();
+                var rb = updatedGO.ObjectReference.GetComponentInChildren<Rigidbody>();
                 model.HasPhysics = rb != null
                     ? AssetConfigurationFile.HasSetting.TRUE
                     : AssetConfigurationFile.HasSetting.FALSE;
 
-                model.IsSceneLogicNode = HasSceneLogicNode(updatedGO.gameObject) 
+                model.IsSceneLogicNode = HasSceneLogicNode(updatedGO.ObjectReference) 
                     ? AssetConfigurationFile.HasSetting.TRUE
                     : AssetConfigurationFile.HasSetting.FALSE;
 
@@ -226,7 +213,7 @@ namespace mtion.room.sdk
                 });
         }
 
-        public static string ConvertSDKAvatarToJsonString(MTIONSDKAssetBase descriptor, UserSdkAuthentication userAuth)
+        public static string ConvertSDKAvatarToJsonString(MTIONSDKAssetBase descriptor)
         {
             string version = "0.0.0";
 
@@ -247,16 +234,9 @@ namespace mtion.room.sdk
 
             AvatarConfigurationFile model = new AvatarConfigurationFile();
 
-            model.OwnerGUID = userAuth.GetUserGUID();
-            model.OwnerEmail = userAuth.GetUserEmail();
-
             model.SceneType = descriptor.ObjectType;
             model.Name = descriptor.Name;
             model.GUID = descriptor.InternalID;
-            model.S3URI = SDKUtil.GenerateServerURI(
-                userAuth.GetUserGUID(),
-                descriptor.InternalID,
-                descriptor.ObjectType);
             model.Version = descriptor.Version;
             model.InternalVersion = version;
             var unixTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();

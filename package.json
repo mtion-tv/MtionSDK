@@ -1,7 +1,7 @@
 {
     "name": "com.mtion.sdk",
     "description": "Tools to create assets and clubhouses for mtion studio.",
-    "version": "0.14.1",
+    "version": "0.15.3",
     "supportedVersion": "2021.3.25f1",
     "unity": "2021.3",
     "displayName": "Mtion SDK",

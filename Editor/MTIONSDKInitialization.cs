@@ -49,29 +49,12 @@ namespace mtion.room.sdk
 
             }
 
-            var roomSDKObject = GameObject.FindObjectOfType<MTIONSDKRoom>();
-            if (roomSDKObject != null)
-            {
-                FixTrackedAsset(roomSDKObject, MTIONObjectType.MTIONSDK_ROOM);
-            }
+            EditorApplication.delayCall += FixAllTrackedAssetsInScene;
 
-            var envSDKObject = GameObject.FindObjectOfType<MTIONSDKEnvironment>();
-            if (envSDKObject != null)
+            EditorSceneManager.sceneOpened += (scene, mode) =>
             {
-                FixTrackedAsset(envSDKObject, MTIONObjectType.MTIONSDK_ENVIRONMENT);
-            }
-
-            var assetSDKObject = GameObject.FindObjectOfType<MTIONSDKAsset>();
-            if (assetSDKObject != null)
-            {
-                FixTrackedAsset(assetSDKObject, MTIONObjectType.MTIONSDK_ASSET);
-            }
-
-            var avatarSDKObject = GameObject.FindObjectOfType<MTIONSDKAvatar>();
-            if (avatarSDKObject != null)
-            {
-                FixTrackedAsset(avatarSDKObject, MTIONObjectType.MTIONSDK_AVATAR);
-            }
+                FixAllTrackedAssetsInScene();
+            };
             
             if (manualCheck)
             {
@@ -115,6 +98,33 @@ namespace mtion.room.sdk
 
             string newDefines = string.Join(";", listDefines.ToArray());
             PlayerSettings.SetScriptingDefineSymbolsForGroup(BuildTargetGroup.Standalone, newDefines);
+        }
+
+        private static void FixAllTrackedAssetsInScene()
+        {
+            var roomSDKObject = GameObject.FindObjectOfType<MTIONSDKRoom>();
+            if (roomSDKObject != null)
+            {
+                FixTrackedAsset(roomSDKObject, MTIONObjectType.MTIONSDK_ROOM);
+            }
+
+            var envSDKObject = GameObject.FindObjectOfType<MTIONSDKEnvironment>();
+            if (envSDKObject != null)
+            {
+                FixTrackedAsset(envSDKObject, MTIONObjectType.MTIONSDK_ENVIRONMENT);
+            }
+
+            var assetSDKObject = GameObject.FindObjectOfType<MTIONSDKAsset>();
+            if (assetSDKObject != null)
+            {
+                FixTrackedAsset(assetSDKObject, MTIONObjectType.MTIONSDK_ASSET);
+            }
+
+            var avatarSDKObject = GameObject.FindObjectOfType<MTIONSDKAvatar>();
+            if (avatarSDKObject != null)
+            {
+                FixTrackedAsset(avatarSDKObject, MTIONObjectType.MTIONSDK_AVATAR);
+            }
         }
 
         private static void FixTrackedAsset(MTIONSDKDescriptorSceneBase descriptorBase, MTIONObjectType mType)

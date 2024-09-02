@@ -14,7 +14,9 @@ namespace mtion.room.sdk.compiled
         private MSDKAddressableAssetDescriptorSO _defaultEnvironmentOLD;
 
         public string EnvironmentInternalID;
-        
+
+        protected override bool ShowReference => false;
+
         [SerializeField] 
         public GameObject SDKRoot;
 

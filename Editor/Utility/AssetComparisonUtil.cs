@@ -176,9 +176,15 @@ namespace mtion.room.sdk.compiled
         private static bool MatchingComponents(GameObject obj1, GameObject obj2)
         {
             var components1 = obj1.GetComponents(typeof(Component))
-                .Select(comp => comp.GetType()).ToLookup(type => type);
+                .Where(comp => comp != null)
+                .Select(comp => comp.GetType())
+                .Where(type => type != null)
+                .ToLookup(type => type);
             var components2 = obj2.GetComponents(typeof(Component))
-                .Select(comp => comp.GetType()).ToLookup(type => type);
+                .Where(comp => comp != null)
+                .Select(comp => comp.GetType())
+                .Where(type => type != null)
+                .ToLookup(type => type);
 
             foreach (var grp in components1)
             {

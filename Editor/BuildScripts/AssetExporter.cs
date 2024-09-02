@@ -1,10 +1,13 @@
 using mtion.room.sdk.compiled;
+using mtion.service.api;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using UnityEditor;
 using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Build;
@@ -33,6 +36,20 @@ namespace mtion.room.sdk
             {
                 throw new ArgumentNullException();
             }
+
+            Resource resource = null;
+            var resourceTask = Task.Run(async () =>
+            {
+                resource = await SDKServerManager.GetResourceById(assetBase.GUID);
+
+            });
+            resourceTask.Wait();
+            if (resource == null)
+            {
+                assetBase.GenerateNewGUID(assetBase.GUID);
+                EditorUtility.SetDirty(assetBase);
+            }
+
 
             if (assetBase.ObjectType == MTIONObjectType.MTIONSDK_ENVIRONMENT ||
                 assetBase.ObjectType == MTIONObjectType.MTIONSDK_ROOM)
@@ -65,7 +82,27 @@ namespace mtion.room.sdk
             {
                 RemoveAddressableGroup();
             }
+
+            MarkAssetDirty();
         }
+
+
+        private void MarkAssetDirty()
+        {
+            var baseDirectory = SDKUtil.GetSDKItemDirectory(assetBase, exportLocationOptions);
+            var localMetaPath = Path.Combine(baseDirectory, "meta.json");
+
+            var metaJson = new Dictionary<string, object>();
+            if (File.Exists(localMetaPath))
+            { 
+                var metaFileData = File.ReadAllText(localMetaPath);
+                metaJson = JsonConvert.DeserializeObject<Dictionary<string, object>>(metaFileData);
+            }
+
+            metaJson["is_dirty"] = true;
+            File.WriteAllText(localMetaPath, JsonConvert.SerializeObject(metaJson));
+        }
+
 
         public void CreateAddressableAssetPrefab()
         {
@@ -118,16 +155,8 @@ namespace mtion.room.sdk
             string localBuildRoot = SDKUtil.GetSDKLocalUnityBuildPath(assetBase, exportLocationOptions);
             string loadRoot = SDKUtil.LOAD_URL;
 
-            compiled.AWSUtil.SDKState = compiled.ProductionLevel.Development;
-            string remoteTarget = compiled.AWSUtil.ServerEndpoint;
-
             profile.SetValue(profileId, AddressableAssetSettings.kLocalBuildPath, $"{localBuildRoot}/[BuildTarget]");
             profile.SetValue(profileId, AddressableAssetSettings.kLocalLoadPath, loadRoot);
-
-            profile.SetValue(profileId, AddressableAssetSettings.kRemoteBuildPath,
-                $"ServerData/Rooms/{assetBase.InternalID}/[BuildTarget]");
-            profile.SetValue(profileId, AddressableAssetSettings.kRemoteLoadPath,
-                $"{remoteTarget}Rooms/{assetBase.InternalID}/[BuildTarget]");
 
             var variantGroup = settings.FindGroup(profileName);
             if (variantGroup == null)

@@ -23,10 +23,12 @@ Shader "Pristine Major Minor Grid"
         
         _Radius("Radius", Float) = 6
         _RadiusWidth("Radius Width", Float) = 0.5
+
+        _Transparency ("Transparency", Range(0,1)) = 0.5
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" }
+        Tags { "Queue"="Transparent" "RenderType"="Transparent" }
         LOD 100
         
         Blend SrcAlpha OneMinusSrcAlpha
@@ -84,6 +86,7 @@ Shader "Pristine Major Minor Grid"
             float _MajorLineWidth, _MinorLineWidth, _AxisLineWidth, _AxisDashScale;
             half4 _MajorLineColor, _MinorLineColor, _BaseColor, _XAxisColor, _XAxisDashColor, _YAxisColor, _YAxisDashColor, _ZAxisColor, _ZAxisDashColor, _CenterColor;
             float _Radius, _RadiusWidth;
+            float _Transparency;
 
             fixed4 frag (v2f i) : SV_Target
             {
@@ -193,6 +196,9 @@ Shader "Pristine Major Minor Grid"
                 {
                     col.a = lerp(col.a, 0, min((d - _Radius)/_RadiusWidth, 1.0));
                 }
+
+                col.a *= _Transparency;
+
                 return col;
             }
             ENDCG

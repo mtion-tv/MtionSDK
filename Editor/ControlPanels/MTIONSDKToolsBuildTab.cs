@@ -1,17 +1,13 @@
-using mtion.room.sdk.compiled;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.IO;
+using System.Linq;
+using mtion.room.sdk.action;
+using mtion.room.sdk.compiled;
+using mtion.room.sdk.customproperties;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEditorInternal;
 using UnityEngine;
-using UnityEngine.SceneManagement;
-using Asyncoroutine;
-using mtion.room.sdk.customproperties;
-using System.Linq;
-using mtion.room.sdk.action;
 using UnityEngine.AI;
 using UnityEngine.EventSystems;
 
@@ -30,12 +26,6 @@ namespace mtion.room.sdk
         private static bool _buildErrorsExist;
         private static Vector2 _scrollPos;
 
-        private static bool uploadErrors;
-        private static bool uploadInProgress;
-        private static DateTime uploadStartTime;
-        private static float uploadProgress = 1;
-        private static int uploadProgressId;
-
         public static void Refresh()
         {
             allCustomPropertiesContainers.Clear();
@@ -48,7 +38,7 @@ namespace mtion.room.sdk
 
             SceneVerificationUtil.VerifySceneIntegrity(_sceneDescriptorObject);
             ComponentVerificationUtil.VerifyAllComponentsIntegrity(_sceneDescriptorObject,
-                    MTIONObjectType.MTIONSDK_ASSET);
+                    MTIONObjectType.MTIONSDK_ASSET, false);
 
             var propContainers = GameObject.FindObjectsOfType<CustomPropertiesContainer>();
             foreach (var propContainer in propContainers)
@@ -73,13 +63,6 @@ namespace mtion.room.sdk
 
         private static void DrawBuildOptions()
         {
-            if (uploadInProgress)
-            {
-                int timeRemaining = Mathf.Max(1, Mathf.RoundToInt((DateTime.Now.Subtract(uploadStartTime).Seconds / uploadProgress) * (1 - uploadProgress)));
-                Progress.SetRemainingTime(uploadProgressId, timeRemaining);
-                Progress.Report(uploadProgressId, uploadProgress, "Uploading room scene to server...");
-            }
-
             if (!BuildManager.IsSceneValid())
             {
                 CreateRoomInstantiationOptions();
@@ -122,14 +105,15 @@ namespace mtion.room.sdk
                 toggleStyle.fixedWidth = 22;
                 toggleStyle.fixedHeight = 22;
 
+                var descriptorGO = BuildManager.GetSceneDescriptor();
+                var descriptor = descriptorGO.GetComponent<MTIONSDKDescriptorSceneBase>();
+
                 MTIONSDKToolsWindow.StartBox();
                 {
                     GUILayout.Label("Settings", headerLabelStyle);
                     GUILayout.Space(10);
 
                     bool changesMade = false;
-                    var descriptorGO = BuildManager.GetSceneDescriptor();
-                    var descriptor = descriptorGO.GetComponent<MTIONSDKDescriptorSceneBase>();
 
                     GUILayout.BeginHorizontal();
                     GUILayout.Label(new GUIContent("Show grid", "Enables grid visualization in the scene"), textFieldLabelStyle);
@@ -197,8 +181,6 @@ namespace mtion.room.sdk
                     GUILayout.Space(10);
 
                     bool changesMade = false;
-                    var descriptorGO = BuildManager.GetSceneDescriptor();
-                    var descriptor = descriptorGO.GetComponent<MTIONSDKDescriptorSceneBase>();
 
                     GUILayout.BeginHorizontal();
                     GUILayout.Label(new GUIContent("Name", "Name of the asset, used in mtion studio"), textFieldLabelStyle);
@@ -237,43 +219,16 @@ namespace mtion.room.sdk
                     GUILayout.EndHorizontal();
                     GUILayout.Space(10);
 
-                    if (descriptor.ObjectType == MTIONObjectType.MTIONSDK_ROOM)
-                    {
-                        var roomSDKObject = GameObject.FindObjectOfType<MTIONSDKRoom>();
-
-                        GUILayout.BeginHorizontal();
-                        GUILayout.Label(new GUIContent("Environment ID", "Place the environmet ID here to link an environment to the current Room asset."), textFieldLabelStyle);
-                        var defaultEnv = roomSDKObject.EnvironmentInternalID;
-                        roomSDKObject.EnvironmentInternalID = EditorGUILayout.TextField(roomSDKObject.EnvironmentInternalID, textFieldStyle);
-                        changesMade |= defaultEnv != roomSDKObject.EnvironmentInternalID;
-                        GUILayout.FlexibleSpace();
-                        GUILayout.EndHorizontal();
-
-                        GUILayout.Space(10);
-                    }
-                    else if (descriptor.ObjectType == MTIONObjectType.MTIONSDK_ENVIRONMENT)
-                    {
-                        var environmentSDKObject = GameObject.FindObjectOfType<MTIONSDKEnvironment>();
-
-                        GUILayout.BeginHorizontal();
-                        GUILayout.Label(new GUIContent("Environment ID", "Use this ID to link a room to this scene environment"), textFieldLabelStyle);
-                        EditorGUILayout.TextField(environmentSDKObject.InternalID, sizelessTextFieldStyle,
-                            GUILayout.Height(22), GUILayout.Width(450 - 22));
-
-                        Texture duplicateIcon = Resources.Load<Texture>("Icons/duplicate-icon");
-
-                        if (GUILayout.Button(duplicateIcon, MTIONSDKToolsWindow.SmallButtonStyle, GUILayout.Width(22)))
-                        {
-                            EditorGUIUtility.systemCopyBuffer = environmentSDKObject.InternalID;
-                            Debug.Log($"\"{environmentSDKObject.InternalID}\" copied to clipboard");
-                        }
-                        GUILayout.EndHorizontal();
-
-                        GUILayout.Space(10);
-                    }
 
 
-                    if (descriptor.ObjectType == MTIONObjectType.MTIONSDK_ROOM ||
+
+
+
+
+
+
+                    if (descriptor.ObjectType == MTIONObjectType.MTIONSDK_BLUEPRINT ||
+                        descriptor.ObjectType == MTIONObjectType.MTIONSDK_ROOM ||
                         descriptor.ObjectType == MTIONObjectType.MTIONSDK_ENVIRONMENT)
                     {
                         GUILayout.BeginHorizontal();
@@ -297,6 +252,8 @@ namespace mtion.room.sdk
                         GUILayout.EndHorizontal();
                     }
 
+
+
                     if (changesMade)
                     {
                         EditorUtility.SetDirty(descriptor);
@@ -305,6 +262,81 @@ namespace mtion.room.sdk
                 }
                 MTIONSDKToolsWindow.EndBox();
 
+                if (descriptor.ObjectType == MTIONObjectType.MTIONSDK_BLUEPRINT)
+                {
+                    MTIONSDKToolsWindow.StartBox();
+                    {
+                        GUILayout.Label("Scenes", headerLabelStyle);
+                        GUILayout.Space(10);
+
+                        var blueprintSDKObject = GameObject.FindObjectOfType<MTIONSDKBlueprint>();
+                        if (blueprintSDKObject != null)
+                        {
+                            bool SwitchScene = GUILayout.Button(new GUIContent("Switch to Environment Scene"), MTIONSDKToolsWindow.MediumButtonStyle);
+                            if (SwitchScene)
+                            {
+                                var scene = EditorSceneManager.GetSceneByName(blueprintSDKObject.EnvironmentSceneName);
+                                EditorSceneManager.SetActiveScene(scene);
+                            }
+                        }
+
+                    }
+                    MTIONSDKToolsWindow.EndBox();
+                }
+
+
+                if (descriptor.ObjectType == MTIONObjectType.MTIONSDK_ENVIRONMENT)
+                {
+                    MTIONSDKToolsWindow.StartBox();
+                    {
+                        GUILayout.Label("Scenes", headerLabelStyle);
+                        GUILayout.Space(10);
+
+                        var blueprintSDKObject = GameObject.FindObjectOfType<MTIONSDKBlueprint>();
+                        if (blueprintSDKObject != null)
+                        {
+                            bool SwitchScene = GUILayout.Button(new GUIContent("Switch to Room Scene"), MTIONSDKToolsWindow.MediumButtonStyle);
+                            if (SwitchScene)
+                            {
+                                var roomScene = EditorSceneManager.GetSceneByName(blueprintSDKObject.RoomSceneName);
+                                EditorSceneManager.SetActiveScene(roomScene);
+                            }
+                        }
+
+                    }
+                    MTIONSDKToolsWindow.EndBox();
+                    MTIONSDKToolsWindow.StartBox();
+                    {
+                        GUILayout.Label("Lighting", headerLabelStyle);
+                        GUILayout.Space(10);
+
+                        bool openLighting = GUILayout.Button(new GUIContent("Open Lighting Panel"), MTIONSDKToolsWindow.MediumButtonStyle);
+                        if (openLighting)
+                        {
+                            EditorApplication.ExecuteMenuItem("Window/Rendering/Lighting");
+                        }
+                        GUILayout.Space(20);
+
+                        bool guiEnabled = GUI.enabled;
+                        GUI.enabled = !Lightmapping.isRunning;
+
+                        bool bakeLighting = GUILayout.Button(new GUIContent("Bake Lighting"), MTIONSDKToolsWindow.MediumButtonStyle);
+                        if (bakeLighting)
+                        {
+                            Lightmapping.BakeAsync();
+                        }
+
+                        GUI.enabled = guiEnabled;
+
+                        if (Lightmapping.isRunning)
+                        {
+                            Rect lastRect = GUILayoutUtility.GetLastRect();
+
+                            EditorGUI.ProgressBar(lastRect, Lightmapping.buildProgress, $"Baking Lighting... {(Lightmapping.buildProgress).ToString("P0")}");
+                        }
+                    }
+                    MTIONSDKToolsWindow.EndBox();
+                }
 
                 CreateCustomPropertiesTable();
 
@@ -312,13 +344,46 @@ namespace mtion.room.sdk
 
                 GUILayout.BeginHorizontal();
                 {
-                    var buildScene = GUILayout.Button(new GUIContent("Build Scene", "Processes and bundles scene into package for mtion studio"), MTIONSDKToolsWindow.LargeButtonStyle);
+                    bool guiEnabled = GUI.enabled;
+
+                    GUI.enabled = !Lightmapping.isRunning;
+
+                    string buildTooltip = "Processes and bundles scene into package for mtion studio";
+                    if (Lightmapping.isRunning)
+                    {
+                        buildTooltip = "Wait for the lighting baking proccess to end before building the scene.";
+                    }
+                    GUIContent buildButtonContent = new GUIContent("Build Scene", buildTooltip);
+
+                    bool buildScene = GUILayout.Button(buildButtonContent, MTIONSDKToolsWindow.LargeButtonStyle);
+
+                    GUI.enabled = guiEnabled;
+
                     if (buildScene && _buildErrorsExist)
                     {
                         EditorUtility.DisplayDialog("Build errors found", "Please fix all errors indicated in the \"Build\" tab before building.", "Close");
                     }
                     else if (buildScene)
                     {
+                        var blueprintSDKObject = GameObject.FindObjectOfType<MTIONSDKBlueprint>();
+                        if (descriptor.ObjectType == MTIONObjectType.MTIONSDK_ENVIRONMENT)
+                        {
+                            if (blueprintSDKObject != null)
+                            {
+                                var roomScene = EditorSceneManager.GetSceneByName(blueprintSDKObject.RoomSceneName);
+                                EditorSceneManager.SetActiveScene(roomScene);
+                            }
+                            EditorGUILayout.EndHorizontal();
+                            return;
+                        }
+
+                        if (blueprintSDKObject != null)
+                        {
+                            Debug.Assert(blueprintSDKObject.GUID != null);
+                            blueprintSDKObject.ObjectType = MTIONObjectType.MTIONSDK_BLUEPRINT;
+                            AssetDatabase.SaveAssets();
+                        }
+
                         var roomSDKObject = GameObject.FindObjectOfType<MTIONSDKRoom>();
                         if (roomSDKObject != null)
                         {
@@ -367,7 +432,6 @@ namespace mtion.room.sdk
 
                 if (BuildManager.GetSceneDescriptor() != null)
                 {
-                    var descriptor = BuildManager.GetSceneDescriptor().GetComponent<MTIONSDKDescriptorSceneBase>();
                     var buildPath = SDKUtil.GetSDKItemDirectory(descriptor, descriptor.LocationOption);
                     var unityPath = SDKUtil.GetSDKLocalUnityBuildPath(descriptor, descriptor.LocationOption);
                     var webglPath = SDKUtil.GetSDKLocalWebGLBuildPath(descriptor, descriptor.LocationOption);
@@ -390,26 +454,21 @@ namespace mtion.room.sdk
             MTIONSDKToolsWindow.StartBox();
             {
                 {
-                    if (GUILayout.Button(new GUIContent("Create Room Scene", "Initializes current scene to build out a mtion room"), MTIONSDKToolsWindow.LargeButtonStyle))
+                    if (GUILayout.Button(new GUIContent("Create Blueprint Scene", "Initializes current scene to build out a mtion blueprint"), MTIONSDKToolsWindow.LargeButtonStyle))
                     {
-                        CreateRoomScene();
-                    }
-
-                    if (GUILayout.Button(new GUIContent("Create Environment Scene", "Initializes current scene build out a mtion environment"), MTIONSDKToolsWindow.LargeButtonStyle))
-                    {
-                        CreateEnvironmentScene();
+                        SDKEditorUtil.CreateBlueprintScene();
                     }
                 }
                 {
                     if (GUILayout.Button(new GUIContent("Create Asset Scene", "Initializes current scene to build out a mtion asset"), MTIONSDKToolsWindow.LargeButtonStyle))
                     {
-                        CreateAssetScene();
+                        SDKEditorUtil.CreateAssetScene();
                     }
 
 
                     if (GUILayout.Button(new GUIContent("Create Avatar Scene", "Initializes current scene to build out a mtion avatar"), MTIONSDKToolsWindow.LargeButtonStyle))
                     {
-                        CreateAvatarScene();
+                        SDKEditorUtil.CreateAvatarScene();
                     }
 
                 }
@@ -489,124 +548,6 @@ namespace mtion.room.sdk
                 }
             }
             MTIONSDKToolsWindow.EndBox();
-        }
-
-
-        private static IEnumerator PublishSceneEnvironment(MTIONSDKDescriptorSceneBase descriptor, string userGUID)
-        {
-            var scenePath = SDKUtil.GetSDKItemDirectory(descriptor, descriptor.LocationOption);
-            if (!Directory.Exists(scenePath))
-            {
-                Debug.LogError($"Could not find directory to upload: {scenePath}");
-                yield break;
-            }
-
-            var aws = new compiled.AWSUtil();
-
-            uploadErrors = false;
-            uploadInProgress = true;
-            uploadProgress = 0;
-            uploadStartTime = DateTime.Now;
-            uploadProgressId = Progress.Start("Uploading Room Scene");
-            yield return aws.UploadDirectory(descriptor, userGUID, progress => uploadProgress = progress).AsCoroutine();
-
-            Progress.Remove(uploadProgressId);
-            uploadInProgress = false;
-
-            EditorUtility.DisplayDialog("Success", $"Upload of {descriptor.Name} completed.", "OK");
-        }
-
-
-        private static void CreateRoomScene()
-        {
-            GameObject RoomDescriptorObject = new GameObject("MTIONRoomDescriptor");
-            RoomDescriptorObject.transform.position = Vector3.zero;
-            RoomDescriptorObject.transform.rotation = Quaternion.identity;
-            var sdkcomp = RoomDescriptorObject.AddComponent<MTIONSDKRoom>();
-
-            var scene = EditorSceneManager.GetActiveScene();
-            SDKEditorUtil.InitAddressableAssetFields(sdkcomp, MTIONObjectType.MTIONSDK_ROOM, scene.name);
-            AssetDatabase.SaveAssets();
-            GenerateMTIONScene(sdkcomp, scene);
-        }
-
-        private static void CreateEnvironmentScene()
-        {
-            GameObject RoomDescriptorObject = new GameObject("MTIONEnvironmentDescriptor");
-            RoomDescriptorObject.transform.position = Vector3.zero;
-            RoomDescriptorObject.transform.rotation = Quaternion.identity;
-            var sdkcomp = RoomDescriptorObject.AddComponent<MTIONSDKEnvironment>();
-
-            var scene = EditorSceneManager.GetActiveScene();
-            SDKEditorUtil.InitAddressableAssetFields(sdkcomp, MTIONObjectType.MTIONSDK_ENVIRONMENT, scene.name);
-            AssetDatabase.SaveAssets();
-            GenerateMTIONScene(sdkcomp, scene);
-        }
-
-        private static void CreateAssetScene()
-        {
-            GameObject RoomDescriptorObject = new GameObject("MTIONAssetDescriptor");
-            RoomDescriptorObject.transform.position = Vector3.zero;
-            RoomDescriptorObject.transform.rotation = Quaternion.identity;
-            var sdkcomp = RoomDescriptorObject.AddComponent<MTIONSDKAsset>();
-
-            var scene = EditorSceneManager.GetActiveScene();
-            SDKEditorUtil.InitAddressableAssetFields(sdkcomp, MTIONObjectType.MTIONSDK_ASSET, scene.name);
-            AssetDatabase.SaveAssets();
-            GenerateMTIONScene(sdkcomp, scene);
-        }
-
-        private static void CreateAvatarScene()
-        {
-            GameObject avatarDescriptorObject = new GameObject("MTIONAvatarDescriptor");
-            avatarDescriptorObject.transform.position = Vector3.zero;
-            avatarDescriptorObject.transform.rotation = Quaternion.identity;
-            var sdkcomp = avatarDescriptorObject.AddComponent<MTIONSDKAvatar>();
-
-            var scene = EditorSceneManager.GetActiveScene();
-            SDKEditorUtil.InitAddressableAssetFields(sdkcomp, MTIONObjectType.MTIONSDK_AVATAR, scene.name);
-            AssetDatabase.SaveAssets();
-            GenerateMTIONScene(sdkcomp, scene);
-        }
-
-        private static void GenerateMTIONScene(MTIONSDKDescriptorSceneBase descriptor, Scene scene)
-        {
-            string descriptorObjectType = MTIONSDKAssetBase.ConvertObjectTypeToString(descriptor.ObjectType);
-            string scenePath = scene.path;
-
-            Camera mainCamera = null;
-            foreach (var rootGO in scene.GetRootGameObjects())
-            {
-                if (rootGO.GetComponent<Camera>())
-                {
-                    mainCamera = rootGO.GetComponent<Camera>();
-                }
-            }
-            if (mainCamera == null)
-            {
-                GameObject camGO = new GameObject("Main Camera");
-                mainCamera = camGO.AddComponent<Camera>();
-            }
-
-            mainCamera.orthographic = true;
-            mainCamera.orthographicSize = 1.93f;
-            mainCamera.transform.position = new Vector3(-3.31999993f, 2.3599999f, 2.93000007f);
-            mainCamera.transform.rotation = new Quaternion(-0.0752960071f, -0.872711599f, 0.142591402f, -0.460839152f);
-            mainCamera.transform.parent = descriptor.gameObject.transform;
-
-            var forceObjectReferenceCration = descriptor.ObjectReferenceProp;
-
-            if (descriptor.ObjectType == MTIONObjectType.MTIONSDK_ROOM)
-            {
-                var roomDescriptor = descriptor as MTIONSDKRoom;
-                if (roomDescriptor.SDKRoot == null)
-                {
-                    roomDescriptor.SDKRoot = new GameObject("SDK PROPS");
-                    roomDescriptor.SDKRoot.transform.localPosition = Vector3.zero;
-                    roomDescriptor.SDKRoot.transform.localRotation = Quaternion.identity;
-                    roomDescriptor.SDKRoot.transform.localScale = Vector3.one;
-                }
-            }
         }
 
 
@@ -698,7 +639,7 @@ namespace mtion.room.sdk
         private static bool GenerateNoBuildObjectsDetected()
         {
             int buildObjectCount = SceneVerificationUtil.GetBuildObjectCountInScene();
-            if (buildObjectCount <= 1)
+            if (buildObjectCount < 1)
             {
                 var warningMessage = $"Nothing to build in scene. Add gameobjects and rebuild.";
 
@@ -708,7 +649,7 @@ namespace mtion.room.sdk
 
             }
 
-            return buildObjectCount <= 1;
+            return buildObjectCount < 1;
         }
 
         private static bool GenerateMissingAnimatorAvatarError()
