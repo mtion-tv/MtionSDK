@@ -55,13 +55,7 @@ namespace mtion.room.sdk
         public static string SERVER_KEY = null;
         public static string SERVER_ADDRESS = null;
         public static int SERVER_PORT = 0;
-
-        public static UserSdkAuthentication GetUserAuthentication()
-        {
-            return BuildManager.Instance.UserAuthentication;
-        }
-
-
+        
 
         private static readonly Lazy<BuildManager> lazy = new Lazy<BuildManager>(() => new BuildManager());
         public static BuildManager Instance
@@ -88,38 +82,10 @@ namespace mtion.room.sdk
                 return sceneExporter.ExportPercentComplete;
             } 
         }
-        public UserSdkAuthentication UserAuthentication
-        {
-            get
-            {
-                if (userAuthentication == null)
-                {
-                    if (!string.IsNullOrEmpty(SERVER_KEY) && 
-                        !string.IsNullOrEmpty(SERVER_ADDRESS) && 
-                        SERVER_PORT > 0)
-                    {
-                        userAuthentication = new UserSdkAuthentication(SERVER_HTTPS, SERVER_KEY, SERVER_ADDRESS, SERVER_PORT);
-                    }
-                    else
-                    {
-                        userAuthentication = new UserSdkAuthentication();
-                        userAuthentication.RefreshCredentials();
-                    }
-                }
-
-                return userAuthentication;
-            }
-
-            set => userAuthentication = value;
-        }
-
 
 
         private SceneExporter sceneExporter;
         private bool exportTaskRunning = false;
-
-        private UserSdkAuthentication userAuthentication = null;
-
 
 
         private void BuildApplicationAssetBundle()
@@ -145,7 +111,7 @@ namespace mtion.room.sdk
                 roomObject.transform.localScale == Vector3.one)
             {
                 exportTaskRunning = true;
-                sceneExporter = new SceneExporter(sceneObjectDescriptor, UserAuthentication);
+                sceneExporter = new SceneExporter(sceneObjectDescriptor);
                 sceneExporter.ExportSDKScene();
                 sceneExporter = null;
                 exportTaskRunning = false;
@@ -162,16 +128,26 @@ namespace mtion.room.sdk
             List<GameObject> rootObjects = new List<GameObject>();
             currentScene.GetRootGameObjects(rootObjects);
 
+            var descriptors = new List<GameObject>();
             for (int i = 0; i < rootObjects.Count; ++i)
             {
                 var go = rootObjects[i];
-                if (go.GetComponent<MTIONSDKDescriptorSceneBase>())
+                var descriptor = go.GetComponent<MTIONSDKDescriptorSceneBase>();
+
+                if (descriptor == null)
+                {
+                    continue;
+                }
+
+                if (descriptor.ObjectType == MTIONObjectType.MTIONSDK_BLUEPRINT)
                 {
                     return go;
                 }
+
+                descriptors.Add(go);
             }
 
-            return null;
+            return descriptors.Count == 0 ? null : descriptors[0];
         }
     }
 }

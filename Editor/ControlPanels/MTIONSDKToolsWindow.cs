@@ -1,13 +1,15 @@
+using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
 using mtion.room.sdk.compiled;
 using mtion.room.sdk.utility;
 using Newtonsoft.Json;
-using System.Collections;
-using System.Collections.Generic;
-using System.IO;
 using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEditor.PackageManager.Requests;
+using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace mtion.room.sdk
 {
@@ -30,6 +32,12 @@ namespace mtion.room.sdk
             STANDARD,
             ERROR
         }
+
+        private static bool _authenticated;
+        private static Task<bool> _authenticateTask;
+
+        private static string _remoteSdkVersion;
+        private static Task<string> _remoteSdkVersionTask;
 
         private static Tabs _selectedTab;
         private static bool _showPropPanel;
@@ -78,7 +86,7 @@ namespace mtion.room.sdk
         public static GUIStyle SuccessLabelStyle => _successLabelStyle;
         public static GUIStyle ErrorLabelStyle => _errorLabelStyle;
 
-        [MenuItem("MTION SDK/SDK Tools")]
+        [MenuItem("MTION SDK/SDK Creation Panel")]
         public static void Init()
         {
             MTIONSDKToolsWindow window = (MTIONSDKToolsWindow)GetWindow(typeof(MTIONSDKToolsWindow));
@@ -89,11 +97,16 @@ namespace mtion.room.sdk
         private void OnEnable()
         {
             LoadAllIcons();
-            GetSDKVersion();
+            GetLocalSDKVersion();
             UpdateTabsToDisplay();
             MTIONSDKToolsBuildTab.Refresh();
             MTIONSDKToolsAssetTab.Refresh();
             MTIONSDKToolsActionTab.Refresh();
+
+            SDKServerManager.Init();
+            TryAuthenticate();
+            GetRemoteSdkVersion();
+            PerformSceneTasks();
         }
 
         private void OnGUI()
@@ -105,14 +118,60 @@ namespace mtion.room.sdk
 
             if (string.IsNullOrEmpty(_supportedUnityVersion))
             {
-                DrawLoadingContent();
+                GUILayout.Space(150);
+                DrawLargeMessage("Initializing Unity for SDK");
                 return;
             }
 
-
             if (string.Compare(_supportedUnityVersion, Application.unityVersion) != 0)
             {
-                DrawUnityVersionWarning();
+                GUILayout.Space(150);
+                DrawLargeMessage("Incompatible unity version detected");
+                DrawLargeMessage($"Version {_supportedUnityVersion} is required for the SDK");
+
+                GUILayout.Space(16);
+                GUILayout.BeginHorizontal();
+                {
+                    GUILayout.Space(64);
+                    if (GUILayout.Button($"Click here to download {_supportedUnityVersion}", _largeButtonStyle))
+                    {
+                        Application.OpenURL("https://unity.com/releases/editor/archive");
+                    }
+                    GUILayout.Space(64);
+                }
+                GUILayout.EndHorizontal();
+                return;
+            }
+
+            if (string.IsNullOrEmpty(_remoteSdkVersion) ||
+                string.IsNullOrEmpty(_sdkVersion))
+            {
+                GUILayout.Space(150);
+                DrawLargeMessage("Verifying SDK version...");
+                return;
+            }
+
+            if (!IsSdkVersionSupported(_sdkVersion, _remoteSdkVersion))
+            {
+                GUILayout.Space(150);
+                DrawLargeMessage("SDK is out of date and requires an update");
+                DrawLargeMessage("Please update the SDK");
+                return;
+            }
+
+            if (!_authenticated)
+            {
+                GUILayout.Space(150);
+                if (_authenticateTask != null)
+                {
+                    DrawLargeMessage("Authenticating...");
+                }
+                else
+                {
+                    DrawLargeMessage("Unable to authenticate with mtion servers.");
+                    DrawLargeMessage("Please login to the mtion studio client and then try again.");
+                }
+
                 return;
             }
 
@@ -122,7 +181,8 @@ namespace mtion.room.sdk
 
         private void OnFocus()
         {
-            UpdateTabsToDisplay();
+            TryAuthenticate();
+            PerformSceneTasks();
 
             switch (_selectedTab)
             {
@@ -218,14 +278,40 @@ namespace mtion.room.sdk
             _errorLabelStyle.alignment = TextAnchor.MiddleLeft;
         }
 
-        private void LoadAllIcons()
+        private void TryAuthenticate()
         {
-            _logoIcon = TextureLoader.LoadSDKTexture("mtion-logo.png");
-            _warningIcon = TextureLoader.LoadSDKTexture("warning-icon.png");
-            _errorIcon = TextureLoader.LoadSDKTexture("error-icon.png");
+            if (_authenticated || _authenticateTask != null)
+            {
+                return;
+            }
+
+            SDKServerManager.Init();
+            _authenticateTask = SDKServerManager.Authenticate();
+            _authenticateTask.ContinueWith(t =>
+            {
+                _authenticated = _authenticateTask.Result;
+                _authenticateTask = null;
+            });
         }
 
-        private static void GetSDKVersion()
+        private void GetRemoteSdkVersion()
+        {
+            if (_remoteSdkVersionTask != null)
+            {
+                return;
+            }
+
+            SDKServerManager.Init();
+            _remoteSdkVersionTask = SDKServerManager.GetServerSdkVersion();
+            _remoteSdkVersionTask.ContinueWith(t =>
+            {
+                _remoteSdkVersion = _remoteSdkVersionTask.Result;
+                _remoteSdkVersionTask = null;
+            });
+        }
+
+
+        private static void GetLocalSDKVersion()
         {
             var packageInfoFile = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/LocalPackages/MTIONStudioSDK/package.json");
             if (packageInfoFile != null)
@@ -237,11 +323,11 @@ namespace mtion.room.sdk
             else
             {
                 _packageListRequest = Client.List();
-                EditorApplication.update += GetSDKVersionCallback;
+                EditorApplication.update += GetLocalSDKVersionCallback;
             }
         }
 
-        private static void GetSDKVersionCallback()
+        private static void GetLocalSDKVersionCallback()
         {
             if (!_packageListRequest.IsCompleted)
             {
@@ -268,51 +354,32 @@ namespace mtion.room.sdk
                 }
             }
 
-            EditorApplication.update -= GetSDKVersionCallback;
+            EditorApplication.update -= GetLocalSDKVersionCallback;
         }
 
-        private void DrawLoadingContent()
+        public static bool IsSdkVersionSupported(string localVersion, string remoteVersion)
         {
-            GUILayout.Space(150);
-            GUILayout.BeginHorizontal();
+            var inParts = localVersion.Split('.');
+            var targetParts = remoteVersion.Split('.');
+
+            if (inParts.Length < 3)
             {
-                GUILayout.Space(64);
-                GUILayout.Label($"Initializing Unity for SDK", _headerStyleCenter);
-                GUILayout.Space(64);
+                return false;
             }
-            GUILayout.EndHorizontal();
+
+            if (targetParts[0] != inParts[0] || targetParts[1] != inParts[1])
+            {
+                return false;
+            }
+
+            return true;
         }
 
-        private void DrawUnityVersionWarning()
+        private void LoadAllIcons()
         {
-            GUILayout.Space(150);
-            GUILayout.BeginHorizontal();
-            {
-                GUILayout.Space(64);
-                GUILayout.Label($"Incompatible unity version detected", _headerStyleCenter);
-                GUILayout.Space(64);
-            }
-            GUILayout.EndHorizontal();
-
-            GUILayout.Space(16);
-            GUILayout.BeginHorizontal();
-            {
-                GUILayout.Space(64);
-                GUILayout.Label($"Version {_supportedUnityVersion} is required for the SDK", _headerStyleCenter);
-                GUILayout.Space(64);
-            }
-            GUILayout.EndHorizontal();
-            GUILayout.Space(16);
-            GUILayout.BeginHorizontal();
-            {
-                GUILayout.Space(64);
-                if (GUILayout.Button($"Click here to download {_supportedUnityVersion}", _largeButtonStyle))
-                {
-                    Application.OpenURL("https://unity.com/releases/editor/archive");
-                }
-                GUILayout.Space(64);
-            }
-            GUILayout.EndHorizontal();
+            _logoIcon = TextureLoader.LoadSDKTexture("mtion-logo.png");
+            _warningIcon = TextureLoader.LoadSDKTexture("warning-icon.png");
+            _errorIcon = TextureLoader.LoadSDKTexture("error-icon.png");
         }
 
         private void DrawWindowHeader()
@@ -427,7 +494,7 @@ namespace mtion.room.sdk
 
         private void UpdateTabsToDisplay()
         {
-            var descriptorObject = GameObject.FindObjectOfType<MTIONSDKDescriptorSceneBase>();
+            var descriptorObject = BuildManager.GetSceneDescriptor()?.GetComponentInChildren<MTIONSDKDescriptorSceneBase>();
             if (descriptorObject == null)
             {
                 _showPropPanel = false;
@@ -438,7 +505,7 @@ namespace mtion.room.sdk
             }
             else
             {
-                _showPropPanel = descriptorObject.ObjectType == MTIONObjectType.MTIONSDK_ROOM;
+                _showPropPanel = descriptorObject.ObjectType == MTIONObjectType.MTIONSDK_BLUEPRINT;
                 _showActionPanel = descriptorObject.ObjectType == MTIONObjectType.MTIONSDK_ASSET ||
                     descriptorObject.ObjectType == MTIONObjectType.MTIONSDK_AVATAR;
                 _showRagdollPanel = descriptorObject.ObjectType == MTIONObjectType.MTIONSDK_AVATAR;
@@ -523,6 +590,60 @@ namespace mtion.room.sdk
             }
             GUILayout.FlexibleSpace();
             GUILayout.EndHorizontal();
+        }
+
+        private void DrawLargeMessage(string message)
+        {
+            GUILayout.BeginHorizontal();
+            {
+                GUILayout.Space(64);
+                GUILayout.Label(message, _headerStyleCenter);
+                GUILayout.Space(64);
+            }
+            GUILayout.EndHorizontal();
+        }
+
+        private static void PerformSceneTasks()
+        {
+            SDKMigrationHandler.TryMigrate();
+            OpenEnvironmentSceneForBlueprint();
+        }
+
+        private static void OpenEnvironmentSceneForBlueprint()
+        {
+            var sceneBase = BuildManager.GetSceneDescriptor()?.GetComponentInChildren<MTIONSDKDescriptorSceneBase>();
+            if (sceneBase == null ||
+                sceneBase is not MTIONSDKBlueprint sdkBlueprint)
+            {
+                return;
+            }
+
+            if (!string.IsNullOrEmpty(sdkBlueprint.EnvironmentSceneName))
+            {
+                Scene[] loadedScenes = SceneManager.GetAllScenes();
+                bool envIsLoaded = false;
+                foreach (Scene scene in loadedScenes)
+                {
+                    if (scene.name == sdkBlueprint.EnvironmentSceneName)
+                    {
+                        envIsLoaded = true;
+                        break;
+                    }
+                }
+
+                if (!envIsLoaded)
+                {
+                    string[] results = AssetDatabase.FindAssets(sdkBlueprint.EnvironmentSceneName);
+
+                    if (results.Length > 0)
+                    {
+                        Scene prevScene = EditorSceneManager.GetActiveScene();
+                        string scenePath = AssetDatabase.GUIDToAssetPath(results[0]);
+                        EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
+                        EditorApplication.delayCall += () => { EditorSceneManager.SetActiveScene(prevScene); };
+                    }
+                }
+            }
         }
 
         #endregion

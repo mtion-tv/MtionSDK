@@ -9,7 +9,9 @@
                        "GUID:18d18f811ba286c49814567a3cfba688",
                        "GUID:6f5cb51ce6e5293468b714933a38a33a",
                        "GUID:b46af7ef1acfef34ebc90ce2083b8ede",
-                       "GUID:2419aa43e16a69e4daebf172e841a3f6"
+                       "GUID:2419aa43e16a69e4daebf172e841a3f6",
+                       "GUID:a6d96d124fb86394cb9bf7fb7742c9df",
+                       "GUID:48a58a736f86ede4da8c1b45d76e7577"
                    ],
     "includePlatforms":  [
                              "Editor"
@@ -25,7 +27,11 @@
                                   "MTIONStudioSDK_Public_Compiled.dll",
                                   "MTIONStudioSDK_Public_Compiled_Editor.dll",
                                   "UnityGLTFScripts.dll",
-                                  "UnityGLTFEditor.dll"
+                                  "UnityGLTFEditor.dll",
+                                  "MTIONUtilityClasses.dll",
+                                  "MTIONServerAPI_Public.dll",
+                                  "UniTask.dll",
+                                  "Unity.WebRTC.dll"
                               ],
     "autoReferenced":  true,
     "defineConstraints":  [

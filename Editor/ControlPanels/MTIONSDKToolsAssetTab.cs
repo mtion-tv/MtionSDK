@@ -418,22 +418,22 @@ namespace mtion.room.sdk
                 }
             }
 
-            ComponentVerificationUtil.VerifyAllComponentsIntegrity(_roomSDKDescriptorObject, MTIONObjectType.MTIONSDK_CAMERA);
+            ComponentVerificationUtil.VerifyAllComponentsIntegrity(_roomSDKDescriptorObject, MTIONObjectType.MTIONSDK_CAMERA, false);
             var virtualCameraViews = GameObject.FindObjectsOfType<MVirtualCameraEventTracker>().OrderBy(x => x.OrderPrecedence).ToList();
             _virtualcameraEvents.Clear();
             _virtualcameraEvents.AddRange(virtualCameraViews);
 
-            ComponentVerificationUtil.VerifyAllComponentsIntegrity(_roomSDKDescriptorObject, MTIONObjectType.MTIONSDK_DISPLAY);
+            ComponentVerificationUtil.VerifyAllComponentsIntegrity(_roomSDKDescriptorObject, MTIONObjectType.MTIONSDK_DISPLAY, false);
             var virtualDisplays = GameObject.FindObjectsOfType<MVirtualDisplayTracker>();
             _displayComponents.Clear();
             _displayComponents.AddRange(virtualDisplays);
 
-            ComponentVerificationUtil.VerifyAllComponentsIntegrity(_roomSDKDescriptorObject, MTIONObjectType.MTIONSDK_LIGHT);
+            ComponentVerificationUtil.VerifyAllComponentsIntegrity(_roomSDKDescriptorObject, MTIONObjectType.MTIONSDK_LIGHT, false);
             var virtualLights = GameObject.FindObjectsOfType<MVirtualLightingTracker>();
             _lightingComponents.Clear();
             _lightingComponents.AddRange(virtualLights);
 
-            ComponentVerificationUtil.VerifyAllComponentsIntegrity(_roomSDKDescriptorObject, MTIONObjectType.MTIONSDK_ASSET);
+            ComponentVerificationUtil.VerifyAllComponentsIntegrity(_roomSDKDescriptorObject, MTIONObjectType.MTIONSDK_ASSET, false);
             var virtualAssets = GameObject.FindObjectsOfType<MVirtualAssetTracker>();
             _assetComponents.Clear();
             _assetComponents.AddRange(virtualAssets);

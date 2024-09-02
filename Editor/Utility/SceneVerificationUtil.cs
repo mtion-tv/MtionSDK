@@ -126,7 +126,16 @@ namespace mtion.room.sdk
 
         public static int GetBuildObjectCountInScene()
         {
-            var descriptor = GameObject.FindFirstObjectByType<MTIONSDKDescriptorSceneBase>();
+            var descriptor = BuildManager.GetSceneDescriptor()?.GetComponent<MTIONSDKDescriptorSceneBase>();
+            if (descriptor is MTIONSDKBlueprint sdkBlueprint)
+            {
+                var roomSdk = sdkBlueprint.GetMTIONSDKRoom();
+                if (roomSdk != null && roomSdk.ObjectReference != null)
+                {
+                    return roomSdk.ObjectReference.transform.childCount;
+                }
+            }
+
             if (descriptor != null && descriptor.ObjectReference != null)
             {
                 return descriptor.ObjectReference.transform.childCount;

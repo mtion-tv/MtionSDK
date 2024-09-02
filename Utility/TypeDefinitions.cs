@@ -10,6 +10,7 @@ namespace mtion.room.sdk.compiled
         MTIONSDK_CAMERA,
         MTIONSDK_LIGHT,
         MTIONSDK_AVATAR,
-        MTIONSDK_VSF
+        MTIONSDK_VSF,
+        MTIONSDK_BLUEPRINT,
     }
 }

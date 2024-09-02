@@ -1,10 +1,13 @@
 using mtion.room.sdk.action;
 using mtion.room.sdk.customproperties;
+using mtion.service.api;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
+using UnityEditor;
 using UnityEngine;
 
 namespace mtion.room.sdk.compiled
@@ -16,8 +19,17 @@ namespace mtion.room.sdk.compiled
             var output = new Dictionary<MTIONSDKAssetBase, List<string>>();
 
             var assets = GameObject.FindObjectsOfType<MTIONSDKAssetBase>();
+            var containsBlueprint = assets.Any(x => x.ObjectType == MTIONObjectType.MTIONSDK_BLUEPRINT);
+
             foreach (var asset in assets)
             {
+                if (containsBlueprint &&
+                    (asset.ObjectType == MTIONObjectType.MTIONSDK_ROOM ||
+                    asset.ObjectType == MTIONObjectType.MTIONSDK_ENVIRONMENT))
+                {
+                    continue;
+                }
+
                 output[asset] = new List<string>();
 
                 if (string.IsNullOrEmpty(asset.Name))
@@ -62,8 +74,8 @@ namespace mtion.room.sdk.compiled
             {
                 if (asset.ObjectType != MTIONObjectType.MTIONSDK_ASSET) continue;
 
-                if (asset.ObjectReferenceProp != null && 
-                    asset.ObjectReferenceProp.GetComponentInChildren<Collider>() == null) 
+                if (asset.ObjectReferenceProp != null &&
+                    asset.ObjectReferenceProp.GetComponentInChildren<Collider>() == null)
                 {
                     output.Add(asset);
                 }
@@ -106,7 +118,7 @@ namespace mtion.room.sdk.compiled
         }
 
         public static void VerifyAllComponentsIntegrity(MTIONSDKRoom roomSDKDescriptorObject,
-            MTIONObjectType sdkType)
+            MTIONObjectType sdkType, bool doServerCheck)
         {
             VirtualComponentTracker[] components;
             switch (sdkType)
@@ -121,9 +133,10 @@ namespace mtion.room.sdk.compiled
                     components = GameObject.FindObjectsOfType<MVirtualLightingTracker>();
                     break;
                 case MTIONObjectType.MTIONSDK_ASSET:
-                    VerifyAllAssetsIntegrity(roomSDKDescriptorObject);
+                    VerifyAllAssetsIntegrity(roomSDKDescriptorObject, doServerCheck);
                     return;
                 case MTIONObjectType.MTIONSDK_AVATAR:
+                    VerifyAllAvatarIntegrity(roomSDKDescriptorObject, doServerCheck);
                     return;
                 default:
                     return;
@@ -146,15 +159,37 @@ namespace mtion.room.sdk.compiled
             }
         }
 
-        private static void VerifyAllAssetsIntegrity(MTIONSDKRoom roomSDKDescriptorObject)
+        private static void VerifyAllAssetsIntegrity(MTIONSDKRoom roomSDKDescriptorObject, bool doServerCheck = false)
         {
+            if (doServerCheck)
+            {
+                var virtualAssetsPass0 = GameObject.FindObjectsOfType<MVirtualAssetTracker>();
+                for (int i = 0; i < virtualAssetsPass0.Length; ++i)
+                {
+                    var asset = virtualAssetsPass0[i];
+                    Resource resource = null;
+                    var resourceTask = Task.Run(async () =>
+                    {
+                        resource = await SDKServerManager.GetResourceById(asset.GUID);
+
+                    });
+                    resourceTask.Wait();
+
+                    if (resource == null)
+                    {
+                        asset.GenerateNewGUID(asset.GUID);
+                        EditorUtility.SetDirty(asset);
+                    }
+                }
+            }
+
             var virtualAssetsPass1 = GameObject.FindObjectsOfType<MVirtualAssetTracker>();
             for (int i = 0; i < virtualAssetsPass1.Length; ++i)
             {
                 WrapAsset(virtualAssetsPass1[i], roomSDKDescriptorObject);
             }
 
-            var virtualAssetsPass2 = GameObject.FindObjectsOfType<MVirtualAssetTracker>();         
+            var virtualAssetsPass2 = GameObject.FindObjectsOfType<MVirtualAssetTracker>();
             foreach (var asset in virtualAssetsPass2)
             {
                 asset.ObjectReference = asset.gameObject;
@@ -169,6 +204,30 @@ namespace mtion.room.sdk.compiled
             foreach (var asset in virtualAssetsPass3)
             {
                 AssignAssetGuids(asset, filteredDuplicates);
+            }
+        }
+
+        private static void VerifyAllAvatarIntegrity(MTIONSDKRoom roomSDKDescriptorObject, bool doServerCheck = false)
+        {
+            if (doServerCheck)
+            {
+                var virtualAvatarPass0 = GameObject.FindObjectsOfType<MVirtualAvatarTracker>();
+                for (int i = 0; i < virtualAvatarPass0.Length; ++i)
+                {
+                    var asset = virtualAvatarPass0[i];
+                    Resource resource = null;
+                    var resourceTask = Task.Run(async () =>
+                    {
+                        resource = await SDKServerManager.GetResourceById(asset.GUID);
+                    });
+                    resourceTask.Wait();
+
+                    if (resource == null)
+                    {
+                        asset.GenerateNewGUID(asset.GUID);
+                        EditorUtility.SetDirty(asset);
+                    }
+                }
             }
         }
 
@@ -235,7 +294,7 @@ namespace mtion.room.sdk.compiled
 
             if (staleDuplicate)
             {
-                asset.GenerateNewGUID();
+                asset.GenerateNewGUID(asset.GUID);
             }
         }
 

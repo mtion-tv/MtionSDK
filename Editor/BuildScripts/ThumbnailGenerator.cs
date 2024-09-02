@@ -22,12 +22,12 @@ namespace mtion.room.sdk
             }
         }
 
-        public static void TakeSnapshotOfAssetInCurrentScene(Camera camera, string basePersistentDirectory)
+        public static void TakeSnapshotOfAssetInCurrentScene(Camera camera, string directory, string filename)
         {
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = Color.clear;
 
-            TakeSnapshot(camera, basePersistentDirectory);
+            TakeSnapshot(camera, directory, filename);
         }
 
         public static void TakeSnapShotOfAssetInIsolatedScene(MTIONSDKAssetBase asset, string basePersistentDirectory)
@@ -45,13 +45,13 @@ namespace mtion.room.sdk
             CenterTargetInFrame centerTargetInFrame = camera.GetComponent<CenterTargetInFrame>();
             centerTargetInFrame.CenterOnTarget(goToSnapshot);
             
-            TakeSnapshot(camera, basePersistentDirectory);
+            TakeSnapshot(camera, basePersistentDirectory, "thumbnail.png");
 
             AssetDatabase.DeleteAsset(ThumbnailCreationTempPrefabPath);
             EditorSceneManager.OpenScene(currentScenePath, OpenSceneMode.Single);
         }
 
-        private static void TakeSnapshot(Camera camera, string directory, string filename = "thumbnail.png")
+        private static void TakeSnapshot(Camera camera, string directory, string filename)
         {
             if (camera == null)
             {
@@ -64,15 +64,23 @@ namespace mtion.room.sdk
 
             RenderTexture.active = rt;
             Texture2D snapshot = new Texture2D(ThumbnailResWidth, ThumbnailResHeight, TextureFormat.RGB24, false);
-            snapshot.name = $"Snapshoot-{filename}";
+            snapshot.name = $"Snapshot-{filename}";
             snapshot.ReadPixels(new Rect(0, 0, ThumbnailResWidth, ThumbnailResHeight), 0, 0);
 
             camera.targetTexture = null;
             RenderTexture.active = null; // JC: added to avoid errors
+#if UNITY_EDITOR
             GameObject.DestroyImmediate(rt);
+#else
+            GameObject.Destroy(rt);
+#endif
 
             WriteSnapshotToFile(snapshot, directory, filename);
+#if UNITY_EDITOR
+            GameObject.DestroyImmediate(snapshot);
+#else
             GameObject.Destroy(snapshot);
+#endif
         }
 
         private static void WriteSnapshotToFile(Texture2D snapshot, string directory, string filename)

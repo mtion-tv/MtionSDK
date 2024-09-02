@@ -64,8 +64,7 @@ namespace mtion.room
 
                 float minWait = (MinWaitTime + (1f - _hyperactivity) * HyperactivityScale) / 2f;
                 float maxWait = (MaxWaitTime + (1f - _hyperactivity) * HyperactivityScale) / 2f;
-
-
+                
                 {
                     float waitTime = Time.time + Random.Range(minWait, maxWait);
                     while (Time.time < waitTime)
