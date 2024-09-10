@@ -36,11 +36,14 @@
         }
     ],
     "hideInEditor": false,
-    "license": "Proprietary",
+    "license": "MIT",
     "author": {
         "name": "mtion interactive inc.",
         "email": "hello@mtion.xyz",
         "url": "https://mtion.xyz"
+    },
+    "publishConfig": {
+        "registry": "https://package.openupm.com"
     },
     "keywords": [
         "mtion",
