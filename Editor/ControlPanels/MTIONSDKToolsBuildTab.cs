@@ -209,6 +209,7 @@ namespace mtion.room.sdk
                     GUILayout.EndHorizontal();
                     GUILayout.Space(10);
 
+#if SDK_INTERNAL_FEATURES
                     GUILayout.BeginHorizontal();
                     GUILayout.Label(new GUIContent("Export Location", "PersistentStorage: stores assets to the AppData folder on C drive. \nStreamingAssets: stores built asset to the StreamingAssets folder in Unity project"), textFieldLabelStyle);
                     var locOpts = descriptor.LocationOption;
@@ -218,6 +219,9 @@ namespace mtion.room.sdk
                     GUILayout.FlexibleSpace();
                     GUILayout.EndHorizontal();
                     GUILayout.Space(10);
+#else
+                    descriptor.LocationOption = ExportLocationOptions.PersistentStorage;
+#endif
 
 
 

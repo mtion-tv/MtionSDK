@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using UnityEngine;
 
@@ -9,22 +10,45 @@ namespace mtion.room.sdk.customproperties
     [Serializable]
     public abstract class CustomProperty<T> : ICustomProperty
     {
-        [SerializeField] private string _guid = Guid.NewGuid().ToString("n");
-        [SerializeField] private List<int> _gameObjectSiblingIndexPath;
-        [SerializeField] private string _declaringTypeName;
-        [SerializeField] private string _propertyName;
-        [SerializeField] protected T _defaultValue;
+        #region protected attributes
 
         protected Component _propertyComponent;
         protected PropertyInfo _propertyInfo;
+        
+        #endregion
+        
+        #region private attributes
+        
+        [SerializeField]
+        private string _guid = Guid.NewGuid().ToString("n");
+        [SerializeField]
+        private List<int> _gameObjectSiblingIndexPath;
+        [SerializeField]
+        private string _declaringTypeName;
+        [SerializeField]
+        private string _propertyName;
+        [SerializeField]
+        protected T _defaultValue;
+        
+        #endregion
 
-        private bool PropertyLocated => _propertyComponent != null && _propertyInfo != null;
-
+        #region public properties
+        
         public string GUID => _guid;
         public List<int> GameObjectSiblingIndexPath => new List<int>(_gameObjectSiblingIndexPath);
         public string DeclaringTypeName => _declaringTypeName;
         public string PropertyName => _propertyName;
         public T DefaultValue => _defaultValue;
+
+        #endregion
+        
+        #region private properties
+        
+        private bool PropertyLocated => _propertyComponent != null && _propertyInfo != null;
+        
+        #endregion
+
+        #region public functions
 
         public void SetPropertyMetadata(string declaringTypeName, string propertyName, List<int> siblingIndexPath)
         {
@@ -77,5 +101,26 @@ namespace mtion.room.sdk.customproperties
         }
 
         public abstract T CleanValue(T value);
+        
+        public override bool Equals(object obj)
+        {
+            CustomProperty<T> property = obj as CustomProperty<T>;
+
+            if (property == null)
+            {
+                return false;
+            }
+
+            return DeclaringTypeName == property.DeclaringTypeName && PropertyName == property.PropertyName &&
+                   GameObjectSiblingIndexPath.SequenceEqual(property.GameObjectSiblingIndexPath);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(DeclaringTypeName.GetHashCode(), PropertyName.GetHashCode(),
+                GameObjectSiblingIndexPath.GetHashCode());
+        }
+        
+        #endregion
     }
 }

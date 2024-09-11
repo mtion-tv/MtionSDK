@@ -11,8 +11,10 @@ namespace mtion.room
         private const float MinWaitTime = 0f;
         private const float MaxWaitTime = 2f;
         private const float HyperactivityScale = 20f;
-        private const float TargetPointMaxDistance = 10f;
+        private const float TargetPointMaxDistance = 5f;
         private const float MinTimeSearch = 3f;
+
+        [SerializeField] private float SearchAngleDeg = 45;
 
         protected override IEnumerator MoveCoroutine()
         {
@@ -31,11 +33,12 @@ namespace mtion.room
                 }
 
                 NavMeshHit targetHit;
-                while (!NavMesh.SamplePosition(
-                    transform.position + Random.onUnitSphere * TargetPointMaxDistance * _agent.gameObject.transform.lossyScale.x, out targetHit, 10f, ~0))
+                float mutlipler = Random.Range(0.5f, 2.0f);
+                while (!NavMesh.SamplePosition(RandomDirection(mutlipler), out targetHit, TargetPointMaxDistance * mutlipler, ~0))
                 {
                     yield return null;
                 }
+                ShowDebug(targetHit.position, Color.red);
 
                 yield return new WaitUntil(() => { return !Paused; });
                 _agent.SetDestination(targetHit.position);
@@ -103,6 +106,32 @@ namespace mtion.room
             {
                 _agent.Warp(navMeshHit.position);
             }
+        }
+
+        private Vector3 RandomDirectionWithinAngle(Vector3 baseDirection, float maxAngle)
+        {
+            baseDirection.Normalize();
+
+            Quaternion randomRotation = Quaternion.AngleAxis(Random.Range(0, maxAngle * Mathf.Deg2Rad), Vector3.up) * Quaternion.AngleAxis(Random.Range(0, 360), baseDirection);
+
+            return randomRotation * baseDirection;
+        }
+
+        private Vector3 RandomDirection(float multiplier = 1.0f)
+        {
+            var pos = _agent.transform.position + Random.onUnitSphere * TargetPointMaxDistance * _agent.gameObject.transform.lossyScale.x * multiplier;
+            ShowDebug(pos, Color.green);
+
+            return pos;
+        }
+
+        private void ShowDebug(Vector3 pos, Color c)
+        {
+#if UNITY_EDITOR
+            Debug.Log($"NavMeshAgentRandomMovement::Position: {pos}");
+            Debug.DrawLine(this.transform.position, pos, c, 5f);
+            Debug.DrawLine(pos, pos + Vector3.up, c, 5f);
+#endif
         }
     }
 }

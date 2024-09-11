@@ -308,12 +308,7 @@ namespace mtion.room.sdk.compiled
                 return;
             }
 
-            var customPropsContainer = asset.ObjectReferenceProp.GetComponent<CustomPropertiesContainer>();
-            if (customPropsContainer == null)
-            {
-                customPropsContainer = asset.ObjectReferenceProp.AddComponent<CustomPropertiesContainer>();
-            }
-            customPropsContainer.ClearProperties();
+            CustomPropertiesSimpleContainer updatedProperties = new CustomPropertiesSimpleContainer();
 
             var components = asset.ObjectReferenceProp.GetComponentsInChildren<Component>();
             foreach (var component in components)
@@ -323,70 +318,70 @@ namespace mtion.room.sdk.compiled
                     continue;
                 }
 
-                var allProps = component.GetType().GetProperties();
-                var exposedProps = allProps.Where(prop => Attribute.IsDefined(prop, typeof(CustomPropertyAttribute))).ToList();
-                foreach (var prop in exposedProps)
+                PropertyInfo[] allProps = component.GetType().GetProperties();
+                List<PropertyInfo> exposedProps = allProps.Where((PropertyInfo prop) => Attribute.IsDefined(prop, typeof(CustomPropertyAttribute))).ToList();
+                foreach (PropertyInfo prop in exposedProps)
                 {
                     ICustomProperty customProp = null;
                     IListCustomProperty listCustomProp = null;
-                    var customPropAttribute = (CustomPropertyAttribute)prop.GetCustomAttribute(typeof(CustomPropertyAttribute));
+                    CustomPropertyAttribute customPropAttribute = prop.GetCustomAttribute<CustomPropertyAttribute>();
 
                     if (prop.PropertyType == typeof(bool))
                     {
-                        var boolProp = new BoolCustomProperty(
+                        BoolCustomProperty boolProp = new BoolCustomProperty(
                             customPropAttribute.BoolDefaultValue);
-                        customPropsContainer.BoolCustomProperties.Add(boolProp);
+                        updatedProperties.BoolProperties.Add(boolProp);
                         customProp = boolProp;
                     }
                     else if (prop.PropertyType == typeof(int))
                     {
-                        var intProp = new IntCustomProperty(
+                        IntCustomProperty intProp = new IntCustomProperty(
                             customPropAttribute.IntDefaultValue,
                             customPropAttribute.IntMinValue,
                             customPropAttribute.IntMaxValue);
-                        customPropsContainer.IntCustomProperties.Add(intProp);
+                        updatedProperties.IntProperties.Add(intProp);
                         customProp = intProp;
                     }
                     else if (prop.PropertyType == typeof(float))
                     {
-                        var floatProp = new FloatCustomProperty(
+                        FloatCustomProperty floatProp = new FloatCustomProperty(
                             customPropAttribute.FloatDefaultValue,
                             customPropAttribute.FloatMinValue,
                             customPropAttribute.FloatMaxValue);
-                        customPropsContainer.FloatCustomProperties.Add(floatProp);
+                        updatedProperties.FloatProperties.Add(floatProp);
                         customProp = floatProp;
                     }
                     else if (prop.PropertyType == typeof(string))
                     {
-                        var stringProp = new StringCustomProperty(
+                        StringCustomProperty stringProp = new StringCustomProperty(
                             customPropAttribute.StringDefaultValue);
-                        customPropsContainer.StringCustomProperties.Add(stringProp);
+                        updatedProperties.StringProperties.Add(stringProp);
                         customProp = stringProp;
                     }
                     else if (prop.PropertyType == typeof(List<int>))
                     {
-                        var listIntProp = new ListIntCustomProperty(
+                        ListIntCustomProperty listIntProp = new ListIntCustomProperty(
                             customPropAttribute.IntDefaultValue,
                             customPropAttribute.IntMinValue,
                             customPropAttribute.IntMaxValue);
-                        customPropsContainer.ListIntCustomProperties.Add(listIntProp);
+                        updatedProperties.ListIntProperties.Add(listIntProp);
                         customProp = listIntProp;
                         listCustomProp = listIntProp;
                     }
                     else if (prop.PropertyType == typeof(List<string>))
                     {
-                        var listStringProp = new ListStringCustomProperty(
+                        ListStringCustomProperty listStringProp = new ListStringCustomProperty(
                             customPropAttribute.StringDefaultValue);
-                        customPropsContainer.ListStringCustomProperties.Add(listStringProp);
+                        updatedProperties.ListStringProperties.Add(listStringProp);
                         customProp = listStringProp;
                         listCustomProp = listStringProp;
                     }
 
                     if (customProp != null)
                     {
-                        var declaringTypeName = prop.DeclaringType.AssemblyQualifiedName;
-                        var propName = prop.Name;
-                        var siblingIndexPath = GetAssetGameobjectSiblingIndexPath(asset, component.transform);
+                        string declaringTypeName = prop.DeclaringType.AssemblyQualifiedName;
+                        string propName = prop.Name;
+                        List<int> siblingIndexPath = GetAssetGameobjectSiblingIndexPath(asset, component.transform);
                         customProp.SetPropertyMetadata(declaringTypeName, propName, siblingIndexPath);
                     }
 
@@ -400,6 +395,14 @@ namespace mtion.room.sdk.compiled
                     }
                 }
             }
+                    
+            CustomPropertiesContainer customPropsContainer = asset.ObjectReferenceProp.GetComponent<CustomPropertiesContainer>();
+            if (customPropsContainer == null)
+            {
+                customPropsContainer = asset.ObjectReferenceProp.AddComponent<CustomPropertiesContainer>();
+            }
+            customPropsContainer.AddMissing(updatedProperties);
+            customPropsContainer.RemoveExtras(updatedProperties);
         }
 
         private static List<int> GetAssetGameobjectSiblingIndexPath(MTIONSDKAssetBase assetBase,

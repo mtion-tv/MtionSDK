@@ -79,6 +79,32 @@ public static class MTIONSDKToolsActionTab
                     actions.RemoveAt(i);
                 }
             }
+            else if (actions[i].ActionExitPoints.Count > 0)
+            {
+                IAction action = actions[i].ActionExitPoints[0].Target as IAction;
+                if (actionComponents.Contains(action))
+                {
+                    actionComponents.Remove(action);
+                }
+                else
+                {
+                    GameObject.DestroyImmediate(actions[i]);
+                    actions.RemoveAt(i);
+                }
+            }
+            else if (actions[i].ActionExitParameterProviders.Count > 0)
+            {
+                IAction action = actions[i].ActionExitParameterProviders[0].Target as IAction;
+                if (actionComponents.Contains(action))
+                {
+                    actionComponents.Remove(action);
+                }
+                else
+                {
+                    GameObject.DestroyImmediate(actions[i]);
+                    actions.RemoveAt(i);
+                }
+            }
             else
             {
                 GameObject.DestroyImmediate(actions[i]);
@@ -98,18 +124,63 @@ public static class MTIONSDKToolsActionTab
         MActionBehaviour actionBehaviour = actionGroup.CreateAction();
         actionBehaviour.ActionName = actionName;
         actionBehaviour.ActionDescription = actionDescription;
-        actionBehaviour.ActionEntryPoints.Add(
-            new ActionEntryPointInternal()
-            {
-                Target = action as MonoBehaviour,
-                EntryPoint = new ActionEntryPointInfo()
+        if (action is IMActionInterfaceImpl)
+        {
+            actionBehaviour.ActionEntryPoints.Add(
+                new ActionEntryPointInternal()
                 {
-                    Guid = SDKUtil.GenerateNewGUID()
-                }
-            });
+                    Target = action as MonoBehaviour,
+                    EntryPoint = new ActionEntryPointInfo()
+                    {
+                        Guid = SDKUtil.GenerateNewGUID()
+                    }
+                });
+        }
+
+        if (action is IMActionExitEvent)
+        {
+            actionBehaviour.ActionExitPoints.Add(
+                new ActionExitPointInternal()
+                {
+                    Target = action as MonoBehaviour,
+                    ExitPoint = new ActionExitPointInfo()
+                    {
+                        Guid = SDKUtil.GenerateNewGUID()
+                    }
+                });
+        }
+
+        if (action is IMActionExitParameterProvider outputParametersProvider)
+        {
+            List<ActionExitParameterInfo> parametersInfo =
+                new List<ActionExitParameterInfo>(outputParametersProvider.Count);
+            for(int i = 0; i <= 0; i++)
+            {
+                parametersInfo.Add(new ActionExitParameterInfo()
+                {
+                    Guid = SDKUtil.GenerateNewGUID(),
+                    Name = outputParametersProvider.GetParameterName(i),
+                    ParameterType = 
+                        $"{outputParametersProvider.GetParameterType(i).FullName}, " +
+                        $"{outputParametersProvider.GetParameterType(i).Assembly.FullName}"
+                });
+            }
+            
+            actionBehaviour.ActionExitParameterProviders.Add(
+                new ActionExitParametersProviderInternal()
+                {
+                    Target = action as MonoBehaviour,
+                    Parameters = parametersInfo,
+                });
+        }
+
         actionBehaviour.BuildEntryMap();
         
-        AddActionParameters(action, actionBehaviour);
+        
+        if (action is IMActionInterfaceImpl)
+        {
+            AddActionParameters(action, actionBehaviour);
+        }
     }
     
     private static void AddActionParameters(IAction action, MActionBehaviour actionBehaviour)

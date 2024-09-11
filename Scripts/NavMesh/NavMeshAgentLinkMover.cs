@@ -14,6 +14,7 @@ namespace mtion.room
 
         private NavMeshAgent _agent;
         private float _maxJumpDistance;
+        private bool _autoCrossLink;
 
         public event Action<float, float> OnLinkJumpBegin;
         public event Action OnLinkJumpEnd;
@@ -34,7 +35,10 @@ namespace mtion.room
         {
             while (true)
             {
-                yield return CrossOffMeshLink();
+                if (_autoCrossLink)
+                {
+                    yield return CrossOffMeshLinkCoroutine();
+                }
                 yield return null;
             }
         }
@@ -44,7 +48,12 @@ namespace mtion.room
             _maxJumpDistance = distance;
         }
 
-        private IEnumerator CrossOffMeshLink()
+        public void SetAutoCrossOffMeshLink(bool autoCross)
+        {
+            _autoCrossLink = autoCross;
+        }
+
+        public bool CanCrossOffMeshLink()
         {
             if (_agent.isOnNavMesh &&
                 _agent.isOnOffMeshLink &&
@@ -54,31 +63,55 @@ namespace mtion.room
                 NavMeshUtility.ConvertLinkPosToNavMeshPos(_agent.currentOffMeshLinkData.endPos, out Vector3 endPos);
                 float distance = Vector3.Distance(startPos, endPos);
 
-                if (distance > _maxJumpDistance)
+                if (distance <= _maxJumpDistance)
                 {
-                    yield break;
+                    return true;
                 }
-
-                yield return StartCoroutine(Walk(_agent.transform.position, startPos));
-
-                var yDistance = Math.Abs(endPos.y - startPos.y);
-                if (yDistance > JUMP_Y_THRESHOLD || distance > JUMP_DISTANCE_THRESHOLD)
-                {
-                    float jumpDistance = (endPos - startPos).magnitude;
-                    float jumpDuration = jumpDistance/ (_agent.speed * 1.5f);
-                    OnLinkJumpBegin?.Invoke(jumpDistance, jumpDuration);
-                    yield return StartCoroutine(Jump(startPos, endPos, jumpDuration));
-                    OnLinkJumpEnd?.Invoke();
-                }
-                else
-                {
-                    OnLinkWalkBegin?.Invoke();
-                    yield return StartCoroutine(Walk(startPos, endPos));
-                    OnLinkWalkEnd?.Invoke();
-                }
-
-                _agent.CompleteOffMeshLink();
             }
+
+            return false;
+        }
+
+        public void CrossOffMeshLink()
+        {
+            StartCoroutine(CrossOffMeshLinkCoroutine());
+        }
+
+        private IEnumerator CrossOffMeshLinkCoroutine()
+        {
+            if (!CanCrossOffMeshLink())
+            {
+                yield break;
+            }
+
+            NavMeshUtility.ConvertLinkPosToNavMeshPos(_agent.currentOffMeshLinkData.startPos, out Vector3 startPos);
+            NavMeshUtility.ConvertLinkPosToNavMeshPos(_agent.currentOffMeshLinkData.endPos, out Vector3 endPos);
+            float distance = Vector3.Distance(startPos, endPos);
+
+            if (distance > _maxJumpDistance)
+            {
+                yield break;
+            }
+
+            yield return StartCoroutine(Walk(_agent.transform.position, startPos));
+
+            var yDistance = Math.Abs(endPos.y - startPos.y);
+            if (yDistance > JUMP_Y_THRESHOLD || distance > JUMP_DISTANCE_THRESHOLD)
+            {
+                float jumpDistance = (endPos - startPos).magnitude;
+                float jumpDuration = jumpDistance / (_agent.speed * 1.5f);
+                OnLinkJumpBegin?.Invoke(jumpDistance, jumpDuration);
+                yield return StartCoroutine(Jump(startPos, endPos, jumpDuration));
+                OnLinkJumpEnd?.Invoke();
+            }
+            else
+            {
+                OnLinkWalkBegin?.Invoke();
+                yield return StartCoroutine(Walk(startPos, endPos));
+                OnLinkWalkEnd?.Invoke();
+            }
+
+            _agent.CompleteOffMeshLink();
         }
 
         private IEnumerator Walk(Vector3 startPos, Vector3 endPos)

@@ -1,7 +1,7 @@
 {
     "name": "com.mtion.sdk",
     "description": "Tools to create assets and clubhouses for mtion studio.",
-    "version": "0.15.5",
+    "version": "0.15.6",
     "supportedVersion": "2021.3.25f1",
     "unity": "2021.3",
     "displayName": "Mtion SDK",
@@ -13,28 +13,6 @@
         "com.unity.modules.imageconversion": "1.0.0",
         "com.unity.nuget.newtonsoft-json": "3.2.1"
     },
-    "samples": [
-        {
-            "displayName": "Particle system (Action)",
-            "description": "Simple example showing you how to export a particle system",
-            "path": "Examples~/ParticleSystemExample"
-        },
-        {
-            "displayName": "UnityEvents Export (Action)",
-            "description": "Simple example showing you how to using UnityEvents with the Action system",
-            "path": "Examples~/UnityEventExample"
-        },
-        {
-            "displayName": "Animation Triggers (Action)",
-            "description": "Simple example showing you how to using Animation Triggers with the Action system",
-            "path": "Examples~/AnimationExample"
-        },
-        {
-            "displayName": "Gaming Room (Asset)",
-            "description": "A room and environment example. Use this to create your own room space",
-            "path": "Examples~/RoomExample"
-        }
-    ],
     "hideInEditor": false,
     "license": "MIT",
     "author": {
