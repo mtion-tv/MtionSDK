@@ -60,20 +60,21 @@ namespace mtion.room.sdk.customproperties
         public void LocateProperty(GameObject exportedAssetGO)
         {
             var transform = exportedAssetGO.transform;
-            foreach (var index in _gameObjectSiblingIndexPath)
-            {
-                if (index >= transform.childCount)
-                {
-                    return;
-                }
-
-                transform = transform.GetChild(index);
-            }
 
             var componentType = Type.GetType(_declaringTypeName);
             if (componentType != null)
             {
-                _propertyComponent = transform.GetComponent(componentType);
+                _propertyComponent = transform.GetComponentInChildren(componentType);
+                if (_propertyComponent == null)
+                {
+                    _propertyComponent = transform.GetComponent(componentType);
+                }
+
+                if (_propertyComponent == null)
+                {
+                    return;
+                }
+
                 _propertyInfo = componentType.GetProperty(_propertyName);
             }
         }

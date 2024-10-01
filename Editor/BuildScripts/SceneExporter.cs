@@ -75,36 +75,18 @@ namespace mtion.room.sdk
             {
                 MTIONSDKAsset asset = sceneObjectDescriptor as MTIONSDKAsset;
 
-                Resource resource = null;
-                var resourceTask = Task.Run(async () =>
-                {
-                    resource = await SDKServerManager.GetResourceById(asset.GUID);
+                SDKServerManager.VerifyAssetGuid(asset);
 
-                });
-                resourceTask.Wait();
-                var ownerId = SDKServerManager.UserId;
-                if (resource == null || resource.OwnerId != ownerId)
-                {
-                    asset.GenerateNewGUID(asset.GUID);
-                    EditorUtility.SetDirty(asset);
-                }
+
+
             }
             else if (objectType == MTIONObjectType.MTIONSDK_AVATAR)
             {
                 MTIONSDKAvatar asset = sceneObjectDescriptor as MTIONSDKAvatar;
-                Resource resource = null;
-                var resourceTask = Task.Run(async () =>
-                {
-                    resource = await SDKServerManager.GetResourceById(asset.GUID);
+                
+                SDKServerManager.VerifyAssetGuid(asset);
 
-                });
-                resourceTask.Wait();
-                var ownerId = SDKServerManager.UserId;
-                if (resource == null || resource.OwnerId != ownerId)
-                {
-                    asset.GenerateNewGUID(asset.GUID);
-                    EditorUtility.SetDirty(asset);
-                }
+
             }
 
             SceneVerificationUtil.VerifySceneIntegrity(sceneObjectDescriptor);
@@ -127,57 +109,23 @@ namespace mtion.room.sdk
             }
 
             {
-                Resource resource = null;
-                var blueprintTask = Task.Run(async () =>
-                {
-                    resource = await SDKServerManager.GetResourceById(blueprintDescriptor.GUID);
-
-                });
-                blueprintTask.Wait();
-
-                var ownerId = SDKServerManager.UserId;
-                if (resource == null || resource.OwnerId != ownerId)
-                {
-                    blueprintDescriptor.GenerateNewGUID(blueprintDescriptor.GUID);
-                    EditorUtility.SetDirty(blueprintDescriptor);
-                }
+                SDKServerManager.VerifyAssetGuid(blueprintDescriptor);
             }
 
             MarkSceneDirty(blueprintDescriptor);
 
             var roomDescriptor = blueprintDescriptor.GetMTIONSDKRoom();
             {
-                Resource resource = null;
-                var roomTask = Task.Run(async () =>
-                {
-                    resource = await SDKServerManager.GetResourceById(roomDescriptor.GUID);
-
-                });
-                roomTask.Wait();
-                var ownerId = SDKServerManager.UserId;
-                if (resource == null || resource.OwnerId != ownerId)
-                {
-                    roomDescriptor.GenerateNewGUID(roomDescriptor.GUID);
-                    EditorUtility.SetDirty(roomDescriptor);
-                }
+                SDKServerManager.VerifyAssetGuid(roomDescriptor);
             }
-
 
             var environmentDescriptor = blueprintDescriptor.GetMTIONSDKEnvironment();
             {
-                Resource resource = null;
-                var envTask = Task.Run(async () =>
-                {
-                    resource = await SDKServerManager.GetResourceById(environmentDescriptor.GUID);
+                var (resource, updated) = SDKServerManager.VerifyAssetGuid(roomDescriptor);
 
-                });
-                envTask.Wait();
-                var ownerId = SDKServerManager.UserId;
-                if (resource == null || resource.OwnerId != ownerId)
+                if (updated)
                 {
-                    environmentDescriptor.GenerateNewGUID(environmentDescriptor.GUID);
                     roomDescriptor.EnvironmentInternalID = environmentDescriptor.GUID;
-                    EditorUtility.SetDirty(environmentDescriptor);
                     EditorUtility.SetDirty(roomDescriptor);
                 }
             }
@@ -241,18 +189,11 @@ namespace mtion.room.sdk
                 roomDescriptor = sceneObjectDescriptor as MTIONSDKRoom;
             }
 
-            Resource resource = null;
-            var resourceTask = Task.Run(async () =>
-            {
-                resource = await SDKServerManager.GetResourceById(roomDescriptor.GUID);
+            SDKServerManager.VerifyAssetGuid(roomDescriptor);
 
-            });
-            resourceTask.Wait();
-            var ownerId = SDKServerManager.UserId;
-            if (resource == null || resource.OwnerId != ownerId)
+            if (string.IsNullOrEmpty(roomDescriptor.GUID))
             {
-                roomDescriptor.GenerateNewGUID(roomDescriptor.GUID);
-                EditorUtility.SetDirty(roomDescriptor);
+                roomDescriptor.GenerateNewGUID(null);
             }
 
             ComponentVerificationUtil.VerifyAllComponentsIntegrity(roomDescriptor, MTIONObjectType.MTIONSDK_CAMERA, false);
@@ -300,17 +241,11 @@ namespace mtion.room.sdk
                 environmentDescriptor = sceneObjectDescriptor as MTIONSDKEnvironment;
             }
 
-            Resource resource = null;
-            var resourceTask = Task.Run(async () =>
-            {
-                resource = await SDKServerManager.GetResourceById(environmentDescriptor.GUID);
+            SDKServerManager.VerifyAssetGuid(environmentDescriptor);
 
-            });
-            resourceTask.Wait();
-            var ownerId = SDKServerManager.UserId;
-            if (resource == null || resource.OwnerId != ownerId)
+            if (string.IsNullOrEmpty(environmentDescriptor?.GUID))
             {
-                environmentDescriptor.GenerateNewGUID(environmentDescriptor.GUID);
+                environmentDescriptor.GenerateNewGUID(null);
             }
 
             exportPercentComplete = 0.5f;

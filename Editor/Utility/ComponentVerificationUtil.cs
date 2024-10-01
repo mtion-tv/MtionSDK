@@ -167,20 +167,11 @@ namespace mtion.room.sdk.compiled
                 for (int i = 0; i < virtualAssetsPass0.Length; ++i)
                 {
                     var asset = virtualAssetsPass0[i];
-                    Resource resource = null;
-                    var resourceTask = Task.Run(async () =>
-                    {
-                        resource = await SDKServerManager.GetResourceById(asset.GUID);
 
-                    });
-                    resourceTask.Wait();
+                    SDKServerManager.VerifyAssetGuid(asset);
 
-                    var ownerId = SDKServerManager.UserId;
-                    if (resource == null || resource.OwnerId != ownerId)
-                    {
-                        asset.GenerateNewGUID(asset.GUID);
-                        EditorUtility.SetDirty(asset);
-                    }
+
+
                 }
             }
 
@@ -216,19 +207,9 @@ namespace mtion.room.sdk.compiled
                 for (int i = 0; i < virtualAvatarPass0.Length; ++i)
                 {
                     var asset = virtualAvatarPass0[i];
-                    Resource resource = null;
-                    var resourceTask = Task.Run(async () =>
-                    {
-                        resource = await SDKServerManager.GetResourceById(asset.GUID);
-                    });
-                    resourceTask.Wait();
+                    SDKServerManager.VerifyAssetGuid(asset);
 
-                    var ownerId = SDKServerManager.UserId;
-                    if (resource == null || resource.OwnerId != ownerId)
-                    {
-                        asset.GenerateNewGUID(asset.GUID);
-                        EditorUtility.SetDirty(asset);
-                    }
+
                 }
             }
         }
@@ -308,9 +289,14 @@ namespace mtion.room.sdk.compiled
                 return;
             }
 
+            CollectAssetCustomProperties(asset.ObjectReferenceProp);
+        }
+
+        public static void CollectAssetCustomProperties(GameObject go)
+        {
             CustomPropertiesSimpleContainer updatedProperties = new CustomPropertiesSimpleContainer();
 
-            var components = asset.ObjectReferenceProp.GetComponentsInChildren<Component>();
+            var components = go.GetComponentsInChildren<Component>();
             foreach (var component in components)
             {
                 if (component == null)
@@ -381,7 +367,7 @@ namespace mtion.room.sdk.compiled
                     {
                         string declaringTypeName = prop.DeclaringType.AssemblyQualifiedName;
                         string propName = prop.Name;
-                        List<int> siblingIndexPath = GetAssetGameobjectSiblingIndexPath(asset, component.transform);
+                        List<int> siblingIndexPath = GetAssetGameobjectSiblingIndexPath(go, component.transform);
                         customProp.SetPropertyMetadata(declaringTypeName, propName, siblingIndexPath);
                     }
 
@@ -395,21 +381,22 @@ namespace mtion.room.sdk.compiled
                     }
                 }
             }
-                    
-            CustomPropertiesContainer customPropsContainer = asset.ObjectReferenceProp.GetComponent<CustomPropertiesContainer>();
+
+            CustomPropertiesContainer customPropsContainer = go.GetComponent<CustomPropertiesContainer>();
             if (customPropsContainer == null)
             {
-                customPropsContainer = asset.ObjectReferenceProp.AddComponent<CustomPropertiesContainer>();
+                customPropsContainer = go.AddComponent<CustomPropertiesContainer>();
             }
             customPropsContainer.AddMissing(updatedProperties);
             customPropsContainer.RemoveExtras(updatedProperties);
         }
 
-        private static List<int> GetAssetGameobjectSiblingIndexPath(MTIONSDKAssetBase assetBase,
+
+        private static List<int> GetAssetGameobjectSiblingIndexPath(GameObject go,
             Transform transform)
         {
             var output = new List<int>();
-            while (transform != assetBase.ObjectReferenceProp.transform)
+            while (transform != go.transform)
             {
                 output.Insert(0, transform.GetSiblingIndex());
                 transform = transform.parent;

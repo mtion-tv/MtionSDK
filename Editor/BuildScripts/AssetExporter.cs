@@ -37,19 +37,9 @@ namespace mtion.room.sdk
                 throw new ArgumentNullException();
             }
 
-            Resource resource = null;
-            var resourceTask = Task.Run(async () =>
-            {
-                resource = await SDKServerManager.GetResourceById(assetBase.GUID);
+            SDKServerManager.VerifyAssetGuid(assetBase);
 
-            });
-            resourceTask.Wait();
-            var ownerId = SDKServerManager.UserId;
-            if (resource == null || resource.OwnerId != ownerId)
-            {
-                assetBase.GenerateNewGUID(assetBase.GUID);
-                EditorUtility.SetDirty(assetBase);
-            }
+
 
 
             if (assetBase.ObjectType == MTIONObjectType.MTIONSDK_ENVIRONMENT ||

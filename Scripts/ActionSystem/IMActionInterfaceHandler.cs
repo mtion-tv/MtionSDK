@@ -46,7 +46,9 @@ namespace mtion.room.sdk.action
     {
         ACTION,
         SETTER,
-        GETTER
+        GETTER,
+        FLOW,
+        CONSTANT,
     }
     
     [Serializable]

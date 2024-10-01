@@ -13,6 +13,7 @@ namespace mtion.room.sdk.action
         public const string UPDATE_ENTRY_POINT = "UpdateSynchronizationPoint";
         public const string BIND_TO_ACTION_EXIT = "BindToActionComplete";
         public const string UNBIND_TO_ACTION_EXIT = "UnbindToActionComplete";
+        public const string SIMULATE_ACTION_COMPLETE = "SimulateActionComplete";
     }
     
 
@@ -77,8 +78,17 @@ namespace mtion.room.sdk.action
     {
         void BindToActionComplete(Action onActionComplete);
         void UnbindToActionComplete(Action onActionComplete);
+        void SimulateActionComplete();
     }
-    
+
+    public interface IMMultiActionExitEvents : IAction
+    {
+        void BindToActionComplete(Action onActionComplete);
+        void UnbindToActionComplete(Action onActionComplete);
+        void SimulateActionComplete();
+    }
+
+
     public interface IMActionExitParameterProvider : IAction
     {
         int Count { get; }
@@ -89,6 +99,12 @@ namespace mtion.room.sdk.action
         T GetParameterValue<T>(string parameterName);
         T GetParameterValue<T>(int index);
     }
+
+    public interface IMActionForceInternalUpdate
+    {
+        void ForceInternalUpdate();
+    }
+
 
     public interface IMActionEntryEvent : IAction
     {

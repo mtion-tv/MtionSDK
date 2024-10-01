@@ -79,6 +79,8 @@ namespace mtion.room.sdk.action
         public string Name;
         public string ParameterType;
         public string Description = "Enter description here";
+
+        [SerializeReference]
         public TypeMetadata Metadata;
 
         [SerializeField, HideInInspector]
@@ -138,6 +140,11 @@ namespace mtion.room.sdk.action
             {
                 return service.api.ParameterType.GAMEOBJECT;
             }
+            else if (expectedType == typeof (SignalDataType))
+            {
+                return service.api.ParameterType.SIGNAL;
+            }
+
             return service.api.ParameterType.STRING;
         }
 #endif 
