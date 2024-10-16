@@ -175,6 +175,44 @@ namespace mtion.room.sdk
                 }
                 MTIONSDKToolsWindow.EndBox();
 
+
+                MTIONSDKToolsWindow.StartBox();
+                {
+                    var blueprintSDKObject = GameObject.FindObjectOfType<MTIONSDKBlueprint>();
+                    if (blueprintSDKObject != null)
+                    {
+                        bool sceneExists = false;
+                        string[] guids = AssetDatabase.FindAssets("t:SceneAsset");
+                        foreach (string guid in guids)
+                        {
+                            string path = AssetDatabase.GUIDToAssetPath(guid);
+                            string sceneName = System.IO.Path.GetFileNameWithoutExtension(path);
+                            if (sceneName == blueprintSDKObject.RoomSceneName)
+                            {
+                                sceneExists = true;
+                                break;
+                            }
+                        }
+
+                        if (!sceneExists)
+                        {
+                            EditorGUILayout.HelpBox("Room scene not found. Please drag and drop the scene file.", MessageType.Warning);
+                            SceneAsset newSceneAsset = EditorGUILayout.ObjectField("Room Scene", null, typeof(SceneAsset), false) as SceneAsset;
+                            if (newSceneAsset != null)
+                            {
+                                string sceneName = newSceneAsset.name;
+                                blueprintSDKObject.RoomSceneName = sceneName;
+
+                                EditorUtility.SetDirty(blueprintSDKObject);
+                            }
+
+                            return;
+                        }
+                    }
+                }
+                MTIONSDKToolsWindow.EndBox();
+
+
                 MTIONSDKToolsWindow.StartBox();
                 {
                     GUILayout.Label("Options", headerLabelStyle);
@@ -276,11 +314,39 @@ namespace mtion.room.sdk
                         var blueprintSDKObject = GameObject.FindObjectOfType<MTIONSDKBlueprint>();
                         if (blueprintSDKObject != null)
                         {
-                            bool SwitchScene = GUILayout.Button(new GUIContent("Switch to Environment Scene"), MTIONSDKToolsWindow.MediumButtonStyle);
-                            if (SwitchScene)
+                            bool sceneExists = false;
+                            string[] guids = AssetDatabase.FindAssets("t:SceneAsset");
+                            foreach (string guid in guids)
                             {
-                                var scene = EditorSceneManager.GetSceneByName(blueprintSDKObject.EnvironmentSceneName);
-                                EditorSceneManager.SetActiveScene(scene);
+                                string path = AssetDatabase.GUIDToAssetPath(guid);
+                                string sceneName = System.IO.Path.GetFileNameWithoutExtension(path);
+                                if (sceneName == blueprintSDKObject.EnvironmentSceneName)
+                                {
+                                    sceneExists = true;
+                                    break;
+                                }
+                            }
+
+                            if (!sceneExists)
+                            {
+                                EditorGUILayout.HelpBox("Environment scene not found. Please drag and drop the scene file.", MessageType.Warning);
+                                SceneAsset newSceneAsset = EditorGUILayout.ObjectField("Environment Scene", null, typeof(SceneAsset), false) as SceneAsset;
+                                if (newSceneAsset != null)
+                                {
+                                    string sceneName = newSceneAsset.name;
+                                    blueprintSDKObject.EnvironmentSceneName = sceneName;
+
+                                    EditorUtility.SetDirty(blueprintSDKObject);
+                                }
+                            }
+                            else
+                            {
+                                bool SwitchScene = GUILayout.Button(new GUIContent("Switch to Environment Scene"), MTIONSDKToolsWindow.MediumButtonStyle);
+                                if (SwitchScene)
+                                {
+                                    var scene = EditorSceneManager.GetSceneByName(blueprintSDKObject.EnvironmentSceneName);
+                                    EditorSceneManager.SetActiveScene(scene);
+                                }
                             }
                         }
 

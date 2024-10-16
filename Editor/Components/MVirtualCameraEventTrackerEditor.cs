@@ -53,6 +53,7 @@ namespace mtion.room.sdk
                 TrackerEditorCamera.VizCamera = TrackerEditorCamera.cameraObject.AddComponent<Camera>();
 
                 TrackerEditorCamera.VizTexture = new RenderTexture((int)(TrackerEditorCamera.defaultTextureHeight * instance_.CameraParams.AspectRatio), (int)TrackerEditorCamera.defaultTextureHeight, 0);
+                TrackerEditorCamera.VizTexture.name = "mtion.room.sdk.MVirtualCameraEventTrackerEditor.VizTexture";
                 TrackerEditorCamera.VizCamera.targetTexture = TrackerEditorCamera.VizTexture;
             }
 
@@ -101,6 +102,7 @@ namespace mtion.room.sdk
                     TrackerEditorCamera.VizTexture = new RenderTexture(
                         (int)(TrackerEditorCamera.defaultTextureHeight * tracker.CameraParams.AspectRatio),
                         (int)TrackerEditorCamera.defaultTextureHeight, 0);
+                    TrackerEditorCamera.VizTexture.name = "mtion.room.sdk.MVirtualCameraEventTrackerEditor.VizTexture";
                     TrackerEditorCamera.VizCamera.targetTexture = TrackerEditorCamera.VizTexture;
                     TrackerEditorCamera.VizCamera.Render();
                 }

@@ -57,14 +57,15 @@ namespace mtion.room.sdk
             {
                 return;
             }
-
+            
             RenderTexture rt = new RenderTexture(ThumbnailResWidth, ThumbnailResHeight, 24);
+            rt.name = "ThumbnailGenerator.TakeSnapshot.rt";
             camera.targetTexture = rt;
             camera.Render();
 
             RenderTexture.active = rt;
             Texture2D snapshot = new Texture2D(ThumbnailResWidth, ThumbnailResHeight, TextureFormat.RGB24, false);
-            snapshot.name = $"Snapshot-{filename}";
+            snapshot.name = $"ThumbnailGenerator.TakeSnapshot.Snapshot-{filename}";
             snapshot.ReadPixels(new Rect(0, 0, ThumbnailResWidth, ThumbnailResHeight), 0, 0);
 
             camera.targetTexture = null;

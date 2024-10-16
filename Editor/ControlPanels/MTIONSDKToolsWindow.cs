@@ -547,6 +547,7 @@ namespace mtion.room.sdk
                 pix[i] = col;
             }
             Texture2D result = new Texture2D(width, height);
+            result.name = "MTIONSDKToolsWindow.CreateTextureForColor";
             result.SetPixels(pix);
             result.Apply();
             return result;

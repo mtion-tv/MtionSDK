@@ -87,8 +87,7 @@ namespace mtion.room.sdk.action
         void UnbindToActionComplete(Action onActionComplete);
         void SimulateActionComplete();
     }
-
-
+    
     public interface IMActionExitParameterProvider : IAction
     {
         int Count { get; }
@@ -104,8 +103,7 @@ namespace mtion.room.sdk.action
     {
         void ForceInternalUpdate();
     }
-
-
+    
     public interface IMActionEntryEvent : IAction
     {
         

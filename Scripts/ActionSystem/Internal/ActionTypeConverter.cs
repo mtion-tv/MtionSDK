@@ -10,12 +10,8 @@ namespace mtion.room.sdk.action
 {
 
 
-
-
-
     public static class TypeConversion
     {
-
         public static class NumericConverter
         {
             public static bool IsNumericType(Type type)
@@ -90,7 +86,6 @@ namespace mtion.room.sdk.action
             }
         }
 
-
         public static class ContainerConverter
         {
             public static T DeserializeContainer<T>(string jsonString)
@@ -129,17 +124,16 @@ namespace mtion.room.sdk.action
                     return false;
                 }
             }
-
-
+            
             public static bool IsContainer(Type type)
             {
                 Type[] containerTypes =
                 {
-            typeof(List<>),
-            typeof(Dictionary<,>),
-            typeof(HashSet<>),
-            typeof(Array),
-        };
+                    typeof(List<>),
+                    typeof(Dictionary<,>),
+                    typeof(HashSet<>),
+                    typeof(Array),
+                };
 
                 foreach (Type containerType in containerTypes)
                 {
@@ -178,8 +172,7 @@ namespace mtion.room.sdk.action
                 return IsAssignableToGenericType(baseType, genericType);
             }
         }
-
-
+        
         public static List<object> GenerateParameters(List<object> inputParameters, List<ActionEntryParameterInfo> parameterDefinitions)
         {
             List<object> output = new List<object>();
@@ -210,6 +203,13 @@ namespace mtion.room.sdk.action
                             param = NumericConverter.ConvertToNumericValue(param, expectedType);
                         }
                         else if (expectedType == typeof(string))
+                        {
+                            param = param.ToString();
+                        }
+                    }
+                    else if (inputType == typeof(bool))
+                    {
+                        if (expectedType == typeof(string))
                         {
                             param = Convert.ChangeType(param, expectedType);
                         }
@@ -275,16 +275,10 @@ namespace mtion.room.sdk.action
                 {
                 }
 
-
                 output.Add(param);
             }
 
             return output;
         }
-
-
-
-
-
     }
 }

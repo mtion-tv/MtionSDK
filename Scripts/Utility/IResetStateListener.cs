@@ -6,9 +6,6 @@ namespace mtion.room.sdk
 {
     public interface IResetStateListener
     {
-        public string ClubhouseGuid { get; set; }
-        public string ElementGuid { get; set; }
-
         public void ResetState();
     }
 }
