@@ -6,6 +6,7 @@ using System.IO;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 using System.Text.RegularExpressions;
+using mtion.utility;
 
 namespace mtion.room.sdk
 {
@@ -138,7 +139,7 @@ namespace mtion.room.sdk
         {
             fileLocation = file;
 
-            fileContents = File.ReadAllText(fileLocation);
+            fileContents = SafeFileIO.ReadAllText(fileLocation);
 
             var input = Regex.Replace(fileContents, @"^%TAG !u!.*$", string.Empty, RegexOptions.Multiline);
             input = Regex.Replace(input, @"!u!\S+", string.Empty);

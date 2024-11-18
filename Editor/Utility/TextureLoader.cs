@@ -1,3 +1,4 @@
+using mtion.utility;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -20,9 +21,9 @@ namespace mtion.room.sdk.utility
                 Directory.CreateDirectory(editorDefaultIconsPath);
             }
 
-            if (File.Exists(packageTexturePath))
+            if (SafeFileIO.Exists(packageTexturePath))
             {
-                File.Copy(packageTexturePath, destinationFullPath, true);
+                SafeFileIO.Copy(packageTexturePath, destinationFullPath, true);
                 AssetDatabase.Refresh();
             }
 

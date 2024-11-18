@@ -1,5 +1,6 @@
 using mtion.room.sdk.compiled;
 using mtion.service.api;
+using mtion.utility;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -84,14 +85,14 @@ namespace mtion.room.sdk
             var localMetaPath = Path.Combine(baseDirectory, "meta.json");
 
             var metaJson = new Dictionary<string, object>();
-            if (File.Exists(localMetaPath))
+            if (SafeFileIO.Exists(localMetaPath))
             { 
-                var metaFileData = File.ReadAllText(localMetaPath);
+                var metaFileData = SafeFileIO.ReadAllText(localMetaPath);
                 metaJson = JsonConvert.DeserializeObject<Dictionary<string, object>>(metaFileData);
             }
 
             metaJson["is_dirty"] = true;
-            File.WriteAllText(localMetaPath, JsonConvert.SerializeObject(metaJson));
+            SafeFileIO.WriteAllText(localMetaPath, JsonConvert.SerializeObject(metaJson));
         }
 
 
@@ -378,9 +379,9 @@ namespace mtion.room.sdk
 
             var fileName = $"{SDKUtil.GetGLTFGuid(assetBase)}.glb";
             var filePath = Path.Combine(localWebGLDirectory, fileName).Replace('\\', '/');
-            if (File.Exists(filePath))
+            if (SafeFileIO.Exists(filePath))
             {
-                File.Delete(filePath);
+                SafeFileIO.Delete(filePath);
             }
 
             var exportOptions = new ExportOptions { TexturePathRetriever = GLTFExportMenu.RetrieveTexturePath };
@@ -442,7 +443,7 @@ namespace mtion.room.sdk
                         foreach (string file in files)
                         {
                             string targetFile = Path.GetDirectoryName(file) + "/catalog." + extension;
-                            if (File.Exists(targetFile)) FileUtil.DeleteFileOrDirectory(targetFile);
+                            if (SafeFileIO.Exists(targetFile)) FileUtil.DeleteFileOrDirectory(targetFile);
                             FileUtil.MoveFileOrDirectory(file, targetFile);
                         }
                     }

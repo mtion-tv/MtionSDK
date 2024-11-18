@@ -1,4 +1,5 @@
 using mtion.room.sdk.compiled;
+using mtion.utility;
 using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -24,6 +25,12 @@ namespace mtion.room.sdk
 
         public static void TakeSnapshotOfAssetInCurrentScene(Camera camera, string directory, string filename)
         {
+            if (camera == null)
+            {
+                Debug.LogWarning("Camera could not be found for snapshot image");
+                return;
+            }
+
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = Color.clear;
 
@@ -88,11 +95,11 @@ namespace mtion.room.sdk
         {
             byte[] bytes = snapshot.EncodeToPNG();
             string thumbnailPath = Path.Combine(directory, filename).Replace('\\', '/');
-            if (File.Exists(thumbnailPath))
+            if (SafeFileIO.Exists(thumbnailPath))
             {
-                File.Delete(thumbnailPath);
+                SafeFileIO.Delete(thumbnailPath);
             }
-            File.WriteAllBytes(thumbnailPath, bytes);
+            SafeFileIO.WriteAllBytes(thumbnailPath, bytes);
         }
     }
 }

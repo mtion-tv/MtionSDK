@@ -202,6 +202,10 @@ namespace mtion.room.sdk.action
                         {
                             param = NumericConverter.ConvertToNumericValue(param, expectedType);
                         }
+                        else if (expectedType == typeof(bool))
+                        {
+                            param = Convert.ToBoolean(param);
+                        }
                         else if (expectedType == typeof(string))
                         {
                             param = param.ToString();

@@ -172,14 +172,14 @@ namespace mtion.room.sdk
             var localMetaPath = Path.Combine(baseDirectory, "meta.json");
 
             var metaJson = new Dictionary<string, object>();
-            if (File.Exists(localMetaPath))
+            if (SafeFileIO.Exists(localMetaPath))
             {
-                var metaFileData = File.ReadAllText(localMetaPath);
+                var metaFileData = SafeFileIO.ReadAllText(localMetaPath);
                 metaJson = JsonConvert.DeserializeObject<Dictionary<string, object>>(metaFileData);
             }
 
             metaJson["is_dirty"] = true;
-            File.WriteAllText(localMetaPath, JsonConvert.SerializeObject(metaJson));
+            SafeFileIO.WriteAllText(localMetaPath, JsonConvert.SerializeObject(metaJson));
         }
 
         private void ExportRoomScene(MTIONSDKRoom roomDescriptor = null)
@@ -307,22 +307,22 @@ namespace mtion.room.sdk
             {
                 Id = blueprintDescriptor.GUID,
             };
-            var blueprintThumbnailId = GetThumbnailMediaId(blueprintDescriptor);
+            var blueprintThumbnailId = GetThumbnailId(blueprintDescriptor);
 
-            var roomThumbnailId = GetThumbnailMediaId(roomDescriptor);
+            var roomThumbnailId = GetThumbnailId(roomDescriptor);
             if (!string.IsNullOrEmpty(roomThumbnailId))
             {
-                var thumbnailSourcePath = Path.Combine(SDKUtil.GetSDKMediaDirectory(ExportLocationOptions.PersistentStorage), roomThumbnailId, $"{roomThumbnailId}.png");
-                if (File.Exists(thumbnailSourcePath))
+                var roomThumbnailPath = Path.Combine(SDKUtil.GetSDKThumbnailDirectory(ExportLocationOptions.PersistentStorage), roomThumbnailId, $"{roomThumbnailId}.png");
+                if (SafeFileIO.Exists(roomThumbnailPath))
                 {
-                    var destDir = Path.Combine(SDKUtil.GetSDKMediaDirectory(ExportLocationOptions.PersistentStorage), blueprintThumbnailId);
-                    if (!Directory.Exists(destDir))
+                    var bpThumbnailDir = Path.Combine(SDKUtil.GetSDKThumbnailDirectory(ExportLocationOptions.PersistentStorage), blueprintThumbnailId);
+                    if (!Directory.Exists(bpThumbnailDir))
                     {
-                        Directory.CreateDirectory(destDir);
+                        Directory.CreateDirectory(bpThumbnailDir);
                     }
 
-                    var destPath = Path.Combine(destDir, $"{blueprintThumbnailId}.png");
-                    File.Copy(thumbnailSourcePath, destPath, true);
+                    var bpThumbnailPath = Path.Combine(bpThumbnailDir, $"{blueprintThumbnailId}.png");
+                    SafeFileIO.Copy(roomThumbnailPath, bpThumbnailPath, true);
                 }
             }
 
@@ -426,8 +426,8 @@ namespace mtion.room.sdk
             var blueprintPath = Path.Combine(SDKUtil.GetSDKBlueprintDirectory(blueprintDescriptor.LocationOption), blueprintDescriptor.GUID);
             var blueprintDataPath = Path.Combine(blueprintPath, "clubhouse_file.json");
             var blueprintLocalDataPath = Path.Combine(blueprintPath, "clubhouse_local_data.json");
-            File.WriteAllText(blueprintDataPath, JSONUtil.Serialize(blueprintData));
-            File.WriteAllText(blueprintLocalDataPath, JSONUtil.Serialize(blueprintLocalData));
+            SafeFileIO.WriteAllText(blueprintDataPath, JSONUtil.Serialize(blueprintData));
+            SafeFileIO.WriteAllText(blueprintLocalDataPath, JSONUtil.Serialize(blueprintLocalData));
         }
 
         private void ExportRoomSceneData(MTIONSDKDescriptorSceneBase sceneBase)
@@ -437,14 +437,14 @@ namespace mtion.room.sdk
             try
             {
 
-                var thumbnailMediaId = GetThumbnailMediaId(sceneBase);
+                var thumbnailId = GetThumbnailId(sceneBase);
                 var camera = sceneBase.gameObject.GetComponentInChildren<Camera>();
-                var thumbnailFolderPath = Path.Combine(SDKUtil.GetSDKMediaDirectory(sceneBase.LocationOption), thumbnailMediaId);
-                if (!Directory.Exists(thumbnailFolderPath))
+                var thumbnailDir = Path.Combine(SDKUtil.GetSDKThumbnailDirectory(sceneBase.LocationOption), thumbnailId);
+                if (!Directory.Exists(thumbnailDir))
                 {
-                    Directory.CreateDirectory(thumbnailFolderPath);
+                    Directory.CreateDirectory(thumbnailDir);
                 }
-                ThumbnailGenerator.TakeSnapshotOfAssetInCurrentScene(camera, thumbnailFolderPath, $"{thumbnailMediaId}.png");
+                ThumbnailGenerator.TakeSnapshotOfAssetInCurrentScene(camera, thumbnailDir, $"{thumbnailId}.png");
 
                 var addressablesExporter = new AssetExporter(sceneBase, sceneBase.LocationOption);
                 string guid = sceneBase.GUID;
@@ -470,7 +470,7 @@ namespace mtion.room.sdk
                     lightTrackers,
                     assetTrackers,
                     avatarTrackers,
-                    thumbnailMediaId);
+                    thumbnailId);
                 var basePersistentDirectory = SDKUtil.GetSDKItemDirectory(sceneBase, sceneBase.LocationOption);
                 WriteConfigurationFile(basePersistentDirectory, configData);
             }
@@ -494,14 +494,14 @@ namespace mtion.room.sdk
             try
             {
 
-                var thumbnailMediaId = GetThumbnailMediaId(sceneBase);
+                var thumbnailId = GetThumbnailId(sceneBase);
                 var camera = sceneBase.gameObject.GetComponentInChildren<Camera>();
-                var thumbnailFolderPath = Path.Combine(SDKUtil.GetSDKMediaDirectory(sceneBase.LocationOption), thumbnailMediaId);
-                if (!Directory.Exists(thumbnailFolderPath))
+                var thumbnailDir = Path.Combine(SDKUtil.GetSDKThumbnailDirectory(sceneBase.LocationOption), thumbnailId);
+                if (!Directory.Exists(thumbnailDir))
                 {
-                    Directory.CreateDirectory(thumbnailFolderPath);
+                    Directory.CreateDirectory(thumbnailDir);
                 }
-                ThumbnailGenerator.TakeSnapshotOfAssetInCurrentScene(camera, thumbnailFolderPath, $"{thumbnailMediaId}.png");
+                ThumbnailGenerator.TakeSnapshotOfAssetInCurrentScene(camera, thumbnailDir, $"{thumbnailId}.png");
 
                 var addressablesExporter = new AssetExporter(sceneBase, sceneBase.LocationOption);
                 string guid = sceneBase.GUID;
@@ -521,7 +521,7 @@ namespace mtion.room.sdk
                     null,
                     null,
                     null,
-                    thumbnailMediaId);
+                    thumbnailId);
                 string basePersistentDirectory = SDKUtil.GetSDKItemDirectory(sceneBase, sceneBase.LocationOption);
                 WriteConfigurationFile(basePersistentDirectory, configData);
             }
@@ -607,21 +607,21 @@ namespace mtion.room.sdk
             string basePersistentDirectory = SDKUtil.GetSDKItemDirectory(assetBase, LocationOptions);
             string descriptorData = JsonUtility.ToJson(assetBase);
             var descriptorFile = Path.Combine(basePersistentDirectory, $"{assetBase.InternalID}.json").Replace('\\', '/');
-            if (File.Exists(descriptorFile))
+            if (SafeFileIO.Exists(descriptorFile))
             {
-                File.Delete(descriptorFile);
+                SafeFileIO.Delete(descriptorFile);
             }
-            File.WriteAllText(descriptorFile, descriptorData);
+            SafeFileIO.WriteAllText(descriptorFile, descriptorData);
         }
 
         private static void WriteConfigurationFile(string basePersistentDirectory, string configFileData)
         {
             var configFile = Path.Combine(basePersistentDirectory, $"config.json").Replace('\\', '/');
-            if (File.Exists(configFile))
+            if (SafeFileIO.Exists(configFile))
             {
-                File.Delete(configFile);
+                SafeFileIO.Delete(configFile);
             }
-            File.WriteAllText(configFile, configFileData);
+            SafeFileIO.WriteAllText(configFile, configFileData);
         }
 
         private static void VerifyAndSaveSDKComponents(
@@ -655,19 +655,19 @@ namespace mtion.room.sdk
             }
         }
 
-        private string GetThumbnailMediaId(MTIONSDKDescriptorSceneBase sceneBase)
+        private string GetThumbnailId(MTIONSDKDescriptorSceneBase sceneBase)
         {
             var thumbnailMediaId = "";
             var localDataPath = Path.Combine(SDKUtil.GetSDKAssetDirectory(sceneBase.LocationOption), sceneBase.GUID, "config.json");
 
-            if (!File.Exists(localDataPath))
+            if (!SafeFileIO.Exists(localDataPath))
             {
                 localDataPath = Path.Combine(SDKUtil.GetSDKBlueprintDirectory(), sceneBase.GUID, "meta.json");
             }
 
-            if (File.Exists(localDataPath))
+            if (SafeFileIO.Exists(localDataPath))
             {
-                var fileRawData = File.ReadAllText(localDataPath);
+                var fileRawData = SafeFileIO.ReadAllText(localDataPath);
                 var configFileData = JsonConvert.DeserializeObject<Dictionary<string, object>>(fileRawData);
 
                 if (configFileData.ContainsKey("ThumbnailMediaId"))
@@ -683,16 +683,7 @@ namespace mtion.room.sdk
 
             if (string.IsNullOrEmpty(thumbnailMediaId))
             {
-                SDKServerManager.Init();
-                var resourceTask = Task.Run(async () =>
-                {
-                    var resource = await SDKServerManager.PreRegisterResource(null, service.api.ResourceType.MEDIA);
-                    if (resource != null)
-                    {
-                        thumbnailMediaId = resource.Id;
-                    }
-                });
-                resourceTask.Wait();
+                thumbnailMediaId = Guid.NewGuid().ToString();
             }
 
             return thumbnailMediaId;
@@ -747,7 +738,7 @@ namespace mtion.room.sdk
 
             foreach (string newPath in Directory.GetFiles(sourceFolder, "*.*", SearchOption.AllDirectories))
             {
-                File.Copy(newPath, newPath.Replace(sourceFolder, destinationFolder), true);
+                SafeFileIO.Copy(newPath, newPath.Replace(sourceFolder, destinationFolder), true);
             }
         }
     }
