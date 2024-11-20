@@ -3,10 +3,13 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using mtion.room.sdk.compiled;
-using UnityEditor;
 using UnityEngine;
 using UnityEngine.Serialization;
 using Object = UnityEngine.Object;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace mtion.room.sdk.action
 {

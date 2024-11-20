@@ -33,7 +33,6 @@ namespace mtion.room.sdk
             ERROR
         }
 
-        private static bool _authenticated;
         private static Task<bool> _authenticateTask;
 
         private static string _remoteSdkVersion;
@@ -159,7 +158,7 @@ namespace mtion.room.sdk
                 return;
             }
 
-            if (!_authenticated)
+            if (SDKServerManager.AuthState != service.api.auth.AuthState.AUTHENTICATED)
             {
                 GUILayout.Space(150);
                 if (_authenticateTask != null)
@@ -280,7 +279,7 @@ namespace mtion.room.sdk
 
         private void TryAuthenticate()
         {
-            if (_authenticated || _authenticateTask != null)
+            if (SDKServerManager.AuthState == service.api.auth.AuthState.AUTHENTICATED || _authenticateTask != null)
             {
                 return;
             }
@@ -289,7 +288,6 @@ namespace mtion.room.sdk
             _authenticateTask = SDKServerManager.Authenticate();
             _authenticateTask.ContinueWith(t =>
             {
-                _authenticated = _authenticateTask.Result;
                 _authenticateTask = null;
             });
         }
