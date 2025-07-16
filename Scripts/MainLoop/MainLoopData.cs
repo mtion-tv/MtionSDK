@@ -29,7 +29,13 @@ namespace mtion.room.sdk.compiled.MainLoop
             CameraPosition = camera.transform.position;
             CameraRotaion = camera.transform.rotation;
         }
-        
+
+        public void Set(Vector3 cameraPosition, Quaternion cameraRotaion)
+        {
+            CameraPosition = cameraPosition;
+            CameraRotaion = cameraRotaion;
+        }
+
         #endregion
     }
 }

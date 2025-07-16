@@ -221,7 +221,7 @@ namespace mtion.room.sdk
                     bool changesMade = false;
 
                     GUILayout.BeginHorizontal();
-                    GUILayout.Label(new GUIContent("Name", "Name of the asset, used in mtion studio"), textFieldLabelStyle);
+                    GUILayout.Label(new GUIContent("Name", "Name of the asset, used in mtion worlds"), textFieldLabelStyle);
                     var name = descriptor.Name;
                     descriptor.Name = GUILayout.TextField(descriptor.Name, textFieldStyle);
                     changesMade |= name != descriptor.Name;
@@ -230,7 +230,7 @@ namespace mtion.room.sdk
                     GUILayout.Space(10);
 
                     GUILayout.BeginHorizontal();
-                    GUILayout.Label(new GUIContent("Description", "Description of the asset, used in mtion studio"), textFieldLabelStyle);
+                    GUILayout.Label(new GUIContent("Description", "Description of the asset, used in mtion worlds"), textFieldLabelStyle);
                     var desc = descriptor.Description;
                     descriptor.Description = GUILayout.TextField(descriptor.Description, textFieldStyle);
                     changesMade |= desc != descriptor.Description;
@@ -418,7 +418,7 @@ namespace mtion.room.sdk
 
                     GUI.enabled = !Lightmapping.isRunning;
 
-                    string buildTooltip = "Processes and bundles scene into package for mtion studio";
+                    string buildTooltip = "Processes and bundles scene into package for mtion worlds";
                     if (Lightmapping.isRunning)
                     {
                         buildTooltip = "Wait for the lighting baking proccess to end before building the scene.";
@@ -743,7 +743,7 @@ namespace mtion.room.sdk
             foreach (var kvp in invalidUnityEventActions)
             {
                 var warningMessage = $"UnityEventAction on <b>{kvp.Key.name}</b> contains custom listeners. " +
-                    "These listeners will not function once exported to mtion studio.\n";
+                    "These listeners will not function once exported to mtion worlds.\n";
                 for (var i = 0; i < kvp.Value.Count; ++i)
                 {
                     warningMessage += $"<b>{kvp.Value[i]}</b>";
@@ -876,7 +876,7 @@ namespace mtion.room.sdk
                     {
                         MTIONSDKToolsWindow.StartBox();
                         MTIONSDKToolsWindow.DrawWarning(
-                            $"Asset <b>{tracker.gameObject.name}</b> contains Action {action.GetType().Name}. Please remove it. Actions are not allowed on objects inside clubhouse templates.");
+                            $"Asset <b>{tracker.gameObject.name}</b> contains Action {action.GetType().Name}. Please remove it. Actions are not allowed on objects inside world templates.");
                         MTIONSDKToolsWindow.EndBox();
                     }
                 }

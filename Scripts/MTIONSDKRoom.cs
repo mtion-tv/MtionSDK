@@ -20,7 +20,7 @@ namespace mtion.room.sdk.compiled
         [SerializeField] 
         public GameObject SDKRoot;
 
-        public override void MigrateFromDescriptorSO()
+        public override bool MigrateFromDescriptorSO()
         {
             if (_defaultEnvironmentOLD != null && 
                 _defaultEnvironmentOLD.ObjectType == MTIONObjectType.MTIONSDK_ENVIRONMENT)
@@ -29,7 +29,7 @@ namespace mtion.room.sdk.compiled
                 _defaultEnvironmentOLD = null;
             }
 
-            base.MigrateFromDescriptorSO();
+            return base.MigrateFromDescriptorSO();
         }
     }
 }

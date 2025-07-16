@@ -17,7 +17,7 @@ namespace mtion.room.sdk
             }
 
             GUILayout.Space(10);
-            if (GUILayout.Button(new GUIContent("Tutorials", "Opens link to mtion studio tutorials"), MTIONSDKToolsWindow.LargeButtonStyle))
+            if (GUILayout.Button(new GUIContent("Tutorials", "Opens link to mtion worlds tutorials"), MTIONSDKToolsWindow.LargeButtonStyle))
             {
                 Application.OpenURL("https://docs.mtion.xyz/mtion/tutorials/video-tutorials");
             }

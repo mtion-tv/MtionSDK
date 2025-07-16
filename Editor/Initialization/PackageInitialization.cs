@@ -220,21 +220,26 @@ namespace mtion.room.sdk
         }
 
 
-        private static bool MigrateAssets(VirtualComponentTracker[] assetList, MTIONObjectType sdkType)
+        private static bool MigrateAssets(VirtualComponentTracker[] assets, MTIONObjectType sdkType)
         {
-            return true;
+            if (assets.Length == 0) return false;
+
+            return false;
         }
 
         private static bool MigrateBaseAssets(MTIONSDKAssetBase[] assets, MTIONObjectType sdkType)
         {
+            if (assets.Length == 0) return false;
+
+            bool migrated = false;
             foreach (var asset in assets)
             {
                 if (asset == null) continue;
 
-                asset.MigrateFromDescriptorSO();
+                migrated |= asset.MigrateFromDescriptorSO();
             }
 
-            return true;
+            return migrated;
         }
     }
 }

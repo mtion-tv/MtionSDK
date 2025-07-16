@@ -12,7 +12,7 @@ namespace mtion.room.sdk.compiled
     [ExecuteInEditMode]
     public sealed class MTIONSDKBlueprint : MTIONSDKDescriptorSceneBase
     {
-        public static readonly string CurrentFormatVersion = "1.0.0";
+        public static readonly string CurrentFormatVersion = "1.0.1";
         
         public class ClubhouseData
         {

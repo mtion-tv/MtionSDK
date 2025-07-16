@@ -55,7 +55,6 @@ namespace mtion.room.sdk
             model.SceneType = descriptor.ObjectType;
             model.Name = descriptor.Name;
             model.GUID = descriptor.InternalID;
-            model.ThumbnailMediaId = thumbnailMediaId;
             model.Version = descriptor.Version;
             model.InternalVersion = version;
             var unixTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();

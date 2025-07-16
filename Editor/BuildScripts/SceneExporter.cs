@@ -436,8 +436,7 @@ namespace mtion.room.sdk
 
             try
             {
-
-                var thumbnailId = GetThumbnailId(sceneBase);
+                var thumbnailId = sceneBase.GUID;
                 var camera = sceneBase.gameObject.GetComponentInChildren<Camera>();
                 var thumbnailDir = Path.Combine(SDKUtil.GetSDKThumbnailDirectory(sceneBase.LocationOption), thumbnailId);
                 if (!Directory.Exists(thumbnailDir))
@@ -493,8 +492,7 @@ namespace mtion.room.sdk
 
             try
             {
-
-                var thumbnailId = GetThumbnailId(sceneBase);
+                var thumbnailId = sceneBase.GUID;
                 var camera = sceneBase.gameObject.GetComponentInChildren<Camera>();
                 var thumbnailDir = Path.Combine(SDKUtil.GetSDKThumbnailDirectory(sceneBase.LocationOption), thumbnailId);
                 if (!Directory.Exists(thumbnailDir))
@@ -547,7 +545,6 @@ namespace mtion.room.sdk
             {
                 sceneObjectDescriptor = BuildManager.Instance.SceneDescriptorObject.GetComponent<MTIONSDKDescriptorSceneBase>();
                 var basePersistentDirectory = SDKUtil.GetSDKItemDirectory(assetBase, LocationOptions);
-                var camera = sceneObjectDescriptor.gameObject.GetComponentInChildren<Camera>();
 
                 Type assetBaseType = assetBase.GetType();
 

@@ -85,7 +85,7 @@ namespace mtion.room.sdk
 
             if (_animator == null || !_animator.isHuman)
             {
-                Debug.LogError("Animator is null or is not human! Cannot auto populate bones.");
+                Debug.LogError("Animator is null or is not human! Cannot auto populate bones.", gameObject);
                 return;
             }
 

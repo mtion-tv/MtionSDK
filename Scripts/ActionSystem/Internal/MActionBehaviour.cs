@@ -1,13 +1,12 @@
-
 using System;
 using System.Collections.Generic;
 using System.Reflection;
 using mtion.room.sdk.compiled;
 using UnityEngine;
-using UnityEngine.Serialization;
 using Object = UnityEngine.Object;
 
 #if UNITY_EDITOR
+using UnityEditor.SceneManagement;
 using UnityEditor;
 #endif
 
@@ -42,12 +41,10 @@ namespace mtion.room.sdk.action
 #endif
 
 #if UNITY_EDITOR && SDK_INTERNAL_FEATURES
-
-
+        
         [ContextMenu("mtion/Populate Entry Points")]
         public void PopulateEntryPoints()
         {
-
             foreach (var entryPoint in ActionEntryPoints)
             {
                 if (entryPoint.Target == null) continue;
@@ -105,17 +102,18 @@ namespace mtion.room.sdk.action
             }
             
             EditorUtility.SetDirty(this);
-            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(gameObject.scene);
+            EditorSceneManager.MarkSceneDirty(gameObject.scene);
+            _isCacheValid = false; // Invalidate cache
         }
 #endif
-
-
+        
 
         public bool Deprecated = false;
         public string ActionName;
         public string ActionDescription;
         public ActionNodeType ActionNodeType = ActionNodeType.ACTION;
         public bool Active = true;
+        public bool ByPassTrackFinishFilter = false;
 
 #if !SDK_INTERNAL_FEATURES
         [HideInInspector]
@@ -129,6 +127,12 @@ namespace mtion.room.sdk.action
         private Dictionary<string, int> _actionEntryMap = new Dictionary<string, int>();
         private Dictionary<string, int> _actionExitMap = new Dictionary<string, int>();
         private Dictionary<string, int> _actionExitParameterMap = new Dictionary<string, int>();
+
+        private ActionInterfaceDescriptor _cachedDescriptor;
+        private bool _isCacheValid = false;
+        private List<object> _cachedParameterList;
+        private object[] _cachedParameterArray;
+        private object[] _emptyParametersArray;
 
         private void Awake()
         {
@@ -168,21 +172,43 @@ namespace mtion.room.sdk.action
                             return;
                         }
 
-                        List<object> parameters = new List<object>();
-                        if (paramdef != null)
+                        if (_cachedParameterList == null)
                         {
-                            parameters = TypeConversion.GenerateParameters(input, paramdef);
+                            _cachedParameterList = new List<object>(paramdef != null ? paramdef.Count + 1 : 1);
+                        }
+                        else
+                        {
+                            _cachedParameterList.Clear();
                         }
 
-                        parameters.Add(actionData.Metadata);
+                        if (paramdef != null)
+                        {
+                            TypeConversion.GenerateParametersNonAlloc(input, paramdef, ref _cachedParameterList);
+                        }
 
+                        _cachedParameterList.Add(actionData.Metadata);
 
-                        method.Invoke(entry.Target, parameters.ToArray());
+                        if (_cachedParameterArray == null || _cachedParameterArray.Length < _cachedParameterList.Count)
+                        {
+                            _cachedParameterArray = new object[_cachedParameterList.Count];
+                        }
+
+                        for (int p = 0; p < _cachedParameterList.Count; p++)
+                        {
+                            _cachedParameterArray[p] = _cachedParameterList[p];
+                        }
+
+                        method.Invoke(entry.Target, _cachedParameterArray[0.._cachedParameterList.Count]);
                     }
                 }
             }
             else // Node action does not have an entry connection
             {
+                if (_emptyParametersArray == null)
+                {
+                    _emptyParametersArray = new object[0];
+                }
+
                 foreach (ActionExitPointInternal exitPoint in ActionExitPoints)
                 {
                     MethodInfo method = exitPoint.Target.GetType().GetMethod(ActionConstants.SIMULATE_ACTION_COMPLETE);
@@ -192,19 +218,25 @@ namespace mtion.room.sdk.action
                         return;
                     }
 
-                    method.Invoke(exitPoint.Target, new object[0]);
+                    method.Invoke(exitPoint.Target, _emptyParametersArray);
                 }
             }
         }
 
-        public ActionInterfaceDescriptor GetInterfaceDescriptor()
+        public ActionInterfaceDescriptor GetInterfaceDescriptor(bool ignoreCache = false)
         {
+            if (!ignoreCache && _isCacheValid && _cachedDescriptor != null)
+            {
+                return _cachedDescriptor;
+            }
+            
             var desc = new ActionInterfaceDescriptor();
             desc.Guid = Guid;
             desc.ActionName = ActionName;
             desc.ActionDescription = ActionDescription;
             desc.NodeType = ActionNodeType;
             desc.Deprecated = Deprecated;
+            desc.ByPassFinishFilter = ByPassTrackFinishFilter;
 
 
             desc.ValidEntryPoints = new List<ActionEntryPointInfo>();
@@ -239,7 +271,7 @@ namespace mtion.room.sdk.action
                     continue;
                 }
 
-                int paramsCount = provider.Count == 0 ? parameterProvider.Parameters.Count : provider.Count;
+                int paramsCount = provider.TotalExitParameterConnectors == 0 ? parameterProvider.Parameters.Count : provider.TotalExitParameterConnectors;
                 
                 for (int i = 0; i < paramsCount; ++i)//(int i = 0; i < provider.Count; ++i)//for (int i = 0; i < parameterProvider.Parameters.Count; ++i)
                 {
@@ -252,6 +284,9 @@ namespace mtion.room.sdk.action
                     });
                 }
             }
+
+            _cachedDescriptor = desc;
+            _isCacheValid = true;
 
             return desc;
         }
@@ -273,15 +308,18 @@ namespace mtion.room.sdk.action
             }
         }
 
-        public void ForceInternalUpdate()
+        public int RefreshExitParameterConnectors()
         {
-            foreach (var exitPoint in ActionExitPoints)
+            int totalConnectors = 0;
+            foreach (ActionExitPointInternal exitPoint in ActionExitPoints)
             {
-                (exitPoint.Target as IMActionForceInternalUpdate).ForceInternalUpdate();
+                totalConnectors += (exitPoint.Target as IMActionDynamicExitParameterProvider)
+                    .RefreshExitParameterConnectors();
             }
+
+            return totalConnectors;
         }
-
-
+        
         public T GetParameterValue<T>(string parameterGuid)
         {
             if (_actionExitParameterMap.ContainsKey(parameterGuid))
@@ -334,6 +372,7 @@ namespace mtion.room.sdk.action
                     _actionEntryMap.Add(guid, i);
                 }
             }
+             _isCacheValid = false; // Invalidate cache when maps are rebuilt
         }
 
         public void BuildExitMap()
@@ -347,6 +386,7 @@ namespace mtion.room.sdk.action
                     _actionExitMap.Add(guid, i);
                 }
             }
+             _isCacheValid = false; // Invalidate cache when maps are rebuilt
         }
 
         public void BuildExitParametersMap()
@@ -363,6 +403,7 @@ namespace mtion.room.sdk.action
                     }
                 }
             }
+             _isCacheValid = false; // Invalidate cache when maps are rebuilt
         }
     }
 }

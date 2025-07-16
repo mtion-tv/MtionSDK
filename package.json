@@ -1,7 +1,7 @@
 {
     "name": "com.mtion.sdk",
-    "description": "Tools to create assets and clubhouses for mtion studio.",
-    "version": "0.15.14",
+    "description": "Tools to create assets and clubhouses for mtion worlds.",
+    "version": "0.16.1",
     "supportedVersion": "2021.3.25f1",
     "unity": "2021.3",
     "displayName": "Mtion SDK",
@@ -11,7 +11,8 @@
         "com.unity.mathematics": "1.2.6",
         "com.unity.burst": "1.6.6",
         "com.unity.modules.imageconversion": "1.0.0",
-        "com.unity.nuget.newtonsoft-json": "3.2.1"
+        "com.unity.nuget.newtonsoft-json": "3.2.1", 
+        "com.unity.collections": "1.2.4"
     },
     "hideInEditor": false,
     "license": "MIT",

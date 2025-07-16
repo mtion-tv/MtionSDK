@@ -153,7 +153,7 @@ public static class MTIONSDKToolsActionTab
         if (action is IMActionExitParameterProvider outputParametersProvider)
         {
             List<ActionExitParameterInfo> parametersInfo =
-                new List<ActionExitParameterInfo>(outputParametersProvider.Count);
+                new List<ActionExitParameterInfo>(outputParametersProvider.TotalExitParameterConnectors);
             for(int i = 0; i <= 0; i++)
             {
                 parametersInfo.Add(new ActionExitParameterInfo()
@@ -741,7 +741,7 @@ public static class MTIONSDKToolsActionTab
                                         }
                                     }
 
-                                    while (parameterProvider.Parameters.Count > providerImplementation.Count)
+                                    while (parameterProvider.Parameters.Count > providerImplementation.TotalExitParameterConnectors)
                                     {
                                         parameterProvider.Parameters.RemoveAt(parameterProvider.Parameters.Count - 1);
                                     }

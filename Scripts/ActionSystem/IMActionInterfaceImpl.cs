@@ -1,9 +1,7 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
-
 
 namespace mtion.room.sdk.action
 {
@@ -90,7 +88,7 @@ namespace mtion.room.sdk.action
     
     public interface IMActionExitParameterProvider : IAction
     {
-        int Count { get; }
+        int TotalExitParameterConnectors { get; }
         IReadOnlyList<string> GetParameterNames();
         string GetParameterName(int index);
         Type GetParameterType(string parameterName);
@@ -99,9 +97,9 @@ namespace mtion.room.sdk.action
         T GetParameterValue<T>(int index);
     }
 
-    public interface IMActionForceInternalUpdate
+    public interface IMActionDynamicExitParameterProvider : IMActionExitParameterProvider
     {
-        void ForceInternalUpdate();
+        int RefreshExitParameterConnectors();
     }
     
     public interface IMActionEntryEvent : IAction

@@ -49,12 +49,15 @@ namespace mtion.room.sdk.action
         GETTER,
         FLOW,
         CONSTANT,
+        NOTE,
+        GROUP,
     }
     
     [Serializable]
     public sealed class ActionInterfaceDescriptor
     {
         public bool Deprecated;
+        public bool ByPassFinishFilter;
         
         public string Guid;
         public string ActionName;
@@ -68,6 +71,6 @@ namespace mtion.room.sdk.action
     public interface IMActionInterfaceHandler
     {
         public void Invoke(ActionEventData actionData);
-        public ActionInterfaceDescriptor GetInterfaceDescriptor();
+        public ActionInterfaceDescriptor GetInterfaceDescriptor(bool ignoreCache);
     }
 }

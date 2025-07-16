@@ -168,7 +168,7 @@ namespace mtion.room.sdk
                 else
                 {
                     DrawLargeMessage("Unable to authenticate with mtion servers.");
-                    DrawLargeMessage("Please login to the mtion studio client and then try again.");
+                    DrawLargeMessage("Please login to the mtion worlds client and then try again.");
                 }
 
                 return;
@@ -357,20 +357,43 @@ namespace mtion.room.sdk
 
         public static bool IsSdkVersionSupported(string localVersion, string remoteVersion)
         {
-            var inParts = localVersion.Split('.');
-            var targetParts = remoteVersion.Split('.');
-
-            if (inParts.Length < 3)
-            {
+            if (string.IsNullOrWhiteSpace(localVersion) || string.IsNullOrWhiteSpace(remoteVersion))
                 return false;
-            }
 
-            if (targetParts[0] != inParts[0] || targetParts[1] != inParts[1])
-            {
+            var localParts = localVersion.Split('.');
+            var remoteParts = remoteVersion.Split('.');
+
+            if (localParts.Length < 3 || remoteParts.Length < 3)
                 return false;
-            }
 
-            return true;
+
+            int localMajor = 0;
+            int localMinor = 0;
+            int localPatch = 0;
+
+            int remoteMajor = 0;
+            int remoteMinor = 0;
+            int remotePatch = 0;
+
+
+            bool parsedLocal = int.TryParse(localParts[0], out localMajor)
+                            && int.TryParse(localParts[1], out localMinor)
+                            && int.TryParse(localParts[2], out localPatch);
+
+            bool parsedRemote = int.TryParse(remoteParts[0], out remoteMajor)
+                            && int.TryParse(remoteParts[1], out remoteMinor)
+                            && int.TryParse(remoteParts[2], out remotePatch);
+
+            if (!parsedLocal || !parsedRemote)
+                return false;
+
+            if (localMajor != remoteMajor)
+                return localMajor > remoteMajor;
+
+            if (localMinor != remoteMinor)
+                return localMinor > remoteMinor;
+
+            return localPatch >= remotePatch;
         }
 
         private void LoadAllIcons()
@@ -636,8 +659,24 @@ namespace mtion.room.sdk
 
                     if (results.Length > 0)
                     {
+
+                        string scenePath = "";
+                        for (int i = 0; i < results.Length; i++)
+                        {
+                            scenePath = AssetDatabase.GUIDToAssetPath(results[i]);
+
+                            if (scenePath.EndsWith(".unity"))
+                            {
+                                break;
+                            }
+                        }
+
+                        if (string.IsNullOrEmpty(scenePath))
+                        {
+                            return;
+                        }
+
                         Scene prevScene = EditorSceneManager.GetActiveScene();
-                        string scenePath = AssetDatabase.GUIDToAssetPath(results[0]);
                         EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
                         EditorApplication.delayCall += () => { EditorSceneManager.SetActiveScene(prevScene); };
                     }

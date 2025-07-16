@@ -47,10 +47,22 @@ namespace mtion.room.sdk.compiled.MainLoop
             }
         }
         
+        public static int GetListenerCount()
+        {
+            int count = 0;
+            foreach (MainLoopController controller in _controllers)
+            {
+                count += controller._localListeners.Length;
+            }
+
+            return count;
+        }
+
+
         #endregion
-        
+
         #region private functions
-        
+
         private void MainLoopUpdate(MainLoopData data)
         {
             foreach (IMainLoopListener listener in _localListeners)
