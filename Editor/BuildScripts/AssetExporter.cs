@@ -17,6 +17,7 @@ using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityGLTF;
+using System.Reflection;
 
 namespace mtion.room.sdk
 {
@@ -242,14 +243,14 @@ namespace mtion.room.sdk
                 settings.SetDirty(AddressableAssetSettings.ModificationEvent.GroupRemoved, entry, true);
             }
 
-            settings.ShaderBundleCustomNaming = "";
-            settings.MonoScriptBundleCustomNaming = "";
+            TrySetAddressablesString(settings, "ShaderBundleCustomNaming", "");
+            TrySetAddressablesString(settings, "MonoScriptBundleCustomNaming", "");
             settings.BuildRemoteCatalog = false;
             settings.DisableCatalogUpdateOnStartup = false;
             settings.ContiguousBundles = false;
             settings.IgnoreUnsupportedFilesInBuild = false;
-            settings.ShaderBundleNaming = ShaderBundleNaming.ProjectName;
-            settings.MonoScriptBundleNaming = MonoScriptBundleNaming.Disabled;
+            TrySetAddressablesEnum(settings, "ShaderBundleNaming", "UnityEditor.AddressableAssets.Settings.ShaderBundleNaming", "ProjectName");
+            TrySetAddressablesEnum(settings, "MonoScriptBundleNaming", "UnityEditor.AddressableAssets.Settings.MonoScriptBundleNaming", "Disabled");
 
             AssetDatabase.SaveAssets();
         }
@@ -270,8 +271,8 @@ namespace mtion.room.sdk
             settings.DisableCatalogUpdateOnStartup = true;
             settings.ContiguousBundles = true;
             settings.IgnoreUnsupportedFilesInBuild = true;
-            settings.ShaderBundleNaming = ShaderBundleNaming.DefaultGroupGuid;
-            settings.MonoScriptBundleNaming = MonoScriptBundleNaming.DefaultGroupGuid;
+            TrySetAddressablesEnum(settings, "ShaderBundleNaming", "UnityEditor.AddressableAssets.Settings.ShaderBundleNaming", "DefaultGroupGuid");
+            TrySetAddressablesEnum(settings, "MonoScriptBundleNaming", "UnityEditor.AddressableAssets.Settings.MonoScriptBundleNaming", "DefaultGroupGuid");
 
             string groupProfileName = SDKUtil.GetAddressableGroupName(assetBase);
 
@@ -330,8 +331,8 @@ namespace mtion.room.sdk
                 BundledAssetGroupSchema schema = settings.groups.First(group => @group.name == groupProfileName).GetSchema<BundledAssetGroupSchema>();
                 settings.RemoteCatalogBuildPath = schema.BuildPath;
                 settings.RemoteCatalogLoadPath = schema.LoadPath;
-                settings.ShaderBundleCustomNaming = groupProfileName;
-                settings.MonoScriptBundleCustomNaming = groupProfileName;
+                TrySetAddressablesString(settings, "ShaderBundleCustomNaming", groupProfileName);
+                TrySetAddressablesString(settings, "MonoScriptBundleCustomNaming", groupProfileName);
 
                 AddressableAssetSettings.BuildPlayerContent(out AddressablesPlayerBuildResult result);
                 bool success = string.IsNullOrEmpty(result.Error);
@@ -365,6 +366,31 @@ namespace mtion.room.sdk
             RenameCatalogs(localUnityDirectory, targets);
 
             onExportComplete?.Invoke();
+        }
+
+        // Helpers for Addressables API differences across versions
+        private static void TrySetAddressablesString(AddressableAssetSettings settings, string propertyName, string value)
+        {
+            var prop = settings.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (prop != null && prop.PropertyType == typeof(string) && prop.CanWrite)
+            {
+                prop.SetValue(settings, value);
+            }
+        }
+
+        private static void TrySetAddressablesEnum(AddressableAssetSettings settings, string propertyName, string enumTypeFullName, string enumFieldName)
+        {
+            var asm = typeof(AddressableAssetSettings).Assembly;
+            var enumType = asm.GetType(enumTypeFullName);
+            if (enumType == null || !enumType.IsEnum) return;
+            var prop = settings.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (prop == null || !prop.CanWrite) return;
+            try
+            {
+                var value = Enum.Parse(enumType, enumFieldName);
+                prop.SetValue(settings, value);
+            }
+            catch { /* ignore if field missing */ }
         }
 
         private static void ExportAsGLTF(MTIONSDKAssetBase assetBase, ExportLocationOptions exportLocationOptions, Action onExportComplete)
