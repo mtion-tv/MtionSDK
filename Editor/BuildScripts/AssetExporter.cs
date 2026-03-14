@@ -16,15 +16,50 @@ using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.SceneManagement;
 using UnityEngine;
-using UnityGLTF;
 using System.Reflection;
+using mtion.room.sdk.visualscripting;
 
 namespace mtion.room.sdk
 {
     public class AssetExporter
     {
+        private const string EnableJsonCatalogDefine = "ENABLE_JSON_CATALOG";
+
+        private sealed class AddressablesBuildStateSnapshot
+        {
+            public string ActiveProfileId;
+            public object RemoteCatalogBuildPath;
+            public object RemoteCatalogLoadPath;
+            public string BuiltInBundleCustomNaming;
+            public string ShaderBundleCustomNaming;
+            public string MonoScriptBundleCustomNaming;
+            public object BuiltInBundleNaming;
+            public object ShaderBundleNaming;
+            public object MonoScriptBundleNaming;
+            public bool BuildRemoteCatalog;
+            public bool DisableCatalogUpdateOnStartup;
+            public bool ContiguousBundles;
+            public bool IgnoreUnsupportedFilesInBuild;
+            public string DefaultGroupName;
+            public Dictionary<string, bool> IncludeInBuildByGroupName = new Dictionary<string, bool>();
+            public BuildTarget ActiveBuildTarget;
+            public BuildTargetGroup ActiveBuildTargetGroup;
+            public BuildTarget SelectedStandaloneTarget;
+            public ScriptingImplementation StandaloneScriptingBackend;
+        }
+
+        private static bool EditorCompiledWithJsonCatalog
+        {
+            get
+            {
+                return true;
+            }
+        }
+
         private MTIONSDKAssetBase assetBase;
         private ExportLocationOptions exportLocationOptions;
+
+        public VisualScriptingInspectionReport LastVisualScriptingInspectionReport { get; private set; }
 
         public AssetExporter(MTIONSDKAssetBase assetBase, ExportLocationOptions exportLocationOptions)
         {
@@ -44,6 +79,8 @@ namespace mtion.room.sdk
 
 
 
+            NormalizeVisualScriptingPlacement();
+
             if (assetBase.ObjectType == MTIONObjectType.MTIONSDK_ENVIRONMENT ||
                 assetBase.ObjectType == MTIONObjectType.MTIONSDK_ROOM)
             {
@@ -57,43 +94,40 @@ namespace mtion.room.sdk
             EditorUtility.SetDirty(assetBase);
             EditorSceneManager.SaveOpenScenes();
 
-            CreateAddressablesGroupForExport();
-            if (assetBase.ExportGLTFEnabled)
-            {
-                ExportAsGLTF(assetBase, exportLocationOptions, null);
-            }
-            if (assetBase.ObjectType == MTIONObjectType.MTIONSDK_ENVIRONMENT)
-            {
-                ExportLightmapData(assetBase, exportLocationOptions, null);
-            }
-
             try
             {
+                VisualScriptingProjectPreflight.EnsureGeneratedDataIsHealthy(true);
+                LastVisualScriptingInspectionReport = InspectVisualScriptingContract();
+                CreateAddressablesGroupForExport();
+                DeleteLegacyGLTFArtifacts();
+                if (assetBase.ObjectType == MTIONObjectType.MTIONSDK_ENVIRONMENT)
+                {
+                    ExportLightmapData(assetBase, exportLocationOptions, null);
+                }
+
                 ExportAsAddressableAssetBundle(null);
+                MarkAssetDirty();
             }
             finally
             {
-                RemoveAddressableGroup();
+                try
+                {
+                    RemoveAddressableGroup();
+                }
+                finally
+                {
+                    CleanupGeneratedUnityAssets();
+                }
             }
-
-            MarkAssetDirty();
         }
 
 
         private void MarkAssetDirty()
         {
-            var baseDirectory = SDKUtil.GetSDKItemDirectory(assetBase, exportLocationOptions);
-            var localMetaPath = Path.Combine(baseDirectory, "meta.json");
-
-            var metaJson = new Dictionary<string, object>();
-            if (SafeFileIO.Exists(localMetaPath))
-            { 
-                var metaFileData = SafeFileIO.ReadAllText(localMetaPath);
-                metaJson = JsonConvert.DeserializeObject<Dictionary<string, object>>(metaFileData);
-            }
-
-            metaJson["is_dirty"] = true;
-            SafeFileIO.WriteAllText(localMetaPath, JsonConvert.SerializeObject(metaJson));
+            string thumbnailMediaId = assetBase.ObjectType == MTIONObjectType.MTIONSDK_ASSET || assetBase.ObjectType == MTIONObjectType.MTIONSDK_AVATAR
+                ? null
+                : assetBase.GUID;
+            SDKExportUtility.WriteAssetMetaCache(assetBase, exportLocationOptions, thumbnailMediaId);
         }
 
 
@@ -109,6 +143,12 @@ namespace mtion.room.sdk
 
             PrefabUtility.SaveAsPrefabAsset(assetBase.ObjectReferenceProp, exportPrefabPath);
             AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            if (string.IsNullOrWhiteSpace(AssetDatabase.AssetPathToGUID(exportPrefabPath)))
+            {
+                throw new InvalidOperationException($"Failed to import generated prefab for export: {exportPrefabPath}");
+            }
         }
 
         public void CreateAddressableAssetScene()
@@ -124,6 +164,14 @@ namespace mtion.room.sdk
 
             if (!AssetDatabase.CopyAsset(scenePath, exportScenePath))
                 Debug.LogWarning($"Failed to copy {exportScenePath}");
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            if (string.IsNullOrWhiteSpace(AssetDatabase.AssetPathToGUID(exportScenePath)))
+            {
+                throw new InvalidOperationException($"Failed to import generated scene for export: {exportScenePath}");
+            }
         }
 
         public void CreateAddressablesGroupForExport()
@@ -155,22 +203,16 @@ namespace mtion.room.sdk
             if (variantGroup == null)
             {
                 variantGroup = settings.CreateGroup(profileName, false, false, false, null);
-                var bundleSchema = variantGroup.AddSchema<BundledAssetGroupSchema>();
-                var updateSchema = variantGroup.AddSchema<ContentUpdateGroupSchema>();
-
-                BundledAssetGroupSchema groupSchema = variantGroup.GetSchema<BundledAssetGroupSchema>();
-                groupSchema.UseAssetBundleCache = true;
-                groupSchema.UseAssetBundleCrc = false;
-                groupSchema.IncludeInBuild = false;
-                groupSchema.RetryCount = 3;
-                groupSchema.BundleNaming = BundledAssetGroupSchema.BundleNamingStyle.OnlyHash;
-                groupSchema.BundleMode = BundledAssetGroupSchema.BundlePackingMode.PackTogether;
-                groupSchema.Compression = BundledAssetGroupSchema.BundleCompressionMode.LZ4;
-                groupSchema.BuildPath.SetVariableByName(settings, AddressableAssetSettings.kLocalBuildPath);
-                groupSchema.LoadPath.SetVariableByName(settings, AddressableAssetSettings.kLocalLoadPath);
+                variantGroup.AddSchema<BundledAssetGroupSchema>();
+                variantGroup.AddSchema<ContentUpdateGroupSchema>();
+                ConfigureGroupSchema(settings, variantGroup);
 
                 string sceneAAId = assetBase.AddressableID;
                 string sceneEntryGUID = AssetDatabase.AssetPathToGUID(sceneAAId);
+                if (string.IsNullOrWhiteSpace(sceneEntryGUID))
+                {
+                    throw new InvalidOperationException($"Generated addressable asset is missing a valid Unity GUID: {sceneAAId}");
+                }
                 AddressableAssetEntry sceneAssetEntry = settings.CreateOrMoveEntry(sceneEntryGUID, variantGroup, false, false);
                 sceneAssetEntry.address = sceneAAId;
 
@@ -196,9 +238,16 @@ namespace mtion.room.sdk
             }
             else
             {
+                ConfigureGroupSchema(settings, variantGroup);
+
                 string sceneAAId = assetBase.AddressableID;
                 string sceneEntryGUID = AssetDatabase.AssetPathToGUID(sceneAAId);
-                var sceneAssetEntry = settings.FindAssetEntry(sceneEntryGUID);
+                if (string.IsNullOrWhiteSpace(sceneEntryGUID))
+                {
+                    throw new InvalidOperationException($"Generated addressable asset is missing a valid Unity GUID: {sceneAAId}");
+                }
+                var sceneAssetEntry = settings.CreateOrMoveEntry(sceneEntryGUID, variantGroup, false, false);
+                sceneAssetEntry.address = sceneAAId;
 
                 settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, sceneAssetEntry, true);
 
@@ -207,12 +256,121 @@ namespace mtion.room.sdk
                     string lightAAId = SDKUtil.GetLighmapAddressableId(assetBase);
                     string lightGUID = AssetDatabase.AssetPathToGUID(lightAAId);
                     AddressableAssetEntry lightmapAssetEntry = settings.CreateOrMoveEntry(lightGUID, variantGroup, false, false);
+                    lightmapAssetEntry.address = lightAAId;
 
                     settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, lightmapAssetEntry, true);
                 }
             }
 
             settings.activeProfileId = defaultProfileID;
+
+            AddVisualScriptingAddressableEntries(settings, variantGroup);
+        }
+
+        private VisualScriptingInspectionReport InspectVisualScriptingContract()
+        {
+            VisualScriptingInspectionReport report;
+            switch (assetBase.ObjectType)
+            {
+                case MTIONObjectType.MTIONSDK_ROOM:
+                    report = VisualScriptingSupportUtil.InspectSceneForExport(assetBase.gameObject.scene, VisualScriptingExportTarget.RoomScene);
+                    break;
+                case MTIONObjectType.MTIONSDK_ENVIRONMENT:
+                    report = VisualScriptingSupportUtil.InspectSceneForExport(assetBase.gameObject.scene, VisualScriptingExportTarget.EnvironmentScene);
+                    break;
+                default:
+                    report = VisualScriptingSupportUtil.InspectGameObjectForExport(assetBase.ObjectReferenceProp, VisualScriptingExportTarget.PortablePrefab);
+                    break;
+            }
+
+            foreach (string warning in report.Warnings)
+            {
+                Debug.LogWarning($"[AssetExporter] {warning}", assetBase);
+            }
+
+            if (report.Errors.Count > 0)
+            {
+                throw new InvalidOperationException($"Visual scripting validation failed for {assetBase.InternalID}: {string.Join(" ", report.Errors)}");
+            }
+
+            return report;
+        }
+
+        private void NormalizeVisualScriptingPlacement()
+        {
+            GameObject sdkRoot = assetBase != null ? assetBase.ObjectReferenceProp : null;
+            if (sdkRoot == null)
+            {
+                return;
+            }
+
+            if (!VisualScriptingHostUtility.NormalizePlacement(sdkRoot, false, out _, out List<string> migratedComponents, out string error))
+            {
+                throw new InvalidOperationException(error);
+            }
+
+            if (!VisualScriptingReflectionUtility.SyncEntryPointRegistryFromVisualScripting(sdkRoot, out _, out List<string> syncErrors))
+            {
+                throw new InvalidOperationException(string.Join(" ", syncErrors));
+            }
+
+            if (migratedComponents.Count > 0)
+            {
+                Debug.Log($"[AssetExporter] Moved root-level UVS components into {VisualScriptingHostUtility.HostObjectName}: {string.Join(", ", migratedComponents.Distinct())}", assetBase);
+            }
+        }
+
+        private void AddVisualScriptingAddressableEntries(AddressableAssetSettings settings, AddressableAssetGroup variantGroup)
+        {
+            if (settings == null || variantGroup == null || LastVisualScriptingInspectionReport == null)
+            {
+                return;
+            }
+
+            foreach (string assetPath in LastVisualScriptingInspectionReport.ReferencedAssetPaths)
+            {
+                if (string.IsNullOrWhiteSpace(assetPath) ||
+                    !assetPath.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(assetPath, assetBase.AddressableID, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                string entryGuid = AssetDatabase.AssetPathToGUID(assetPath);
+                if (string.IsNullOrWhiteSpace(entryGuid))
+                {
+                    continue;
+                }
+
+                var existingEntry = settings.FindAssetEntry(entryGuid);
+                if (existingEntry != null && existingEntry.parentGroup != null && existingEntry.parentGroup != variantGroup)
+                {
+                    continue;
+                }
+
+                AddressableAssetEntry assetEntry = settings.CreateOrMoveEntry(entryGuid, variantGroup, false, false);
+                assetEntry.address = assetPath;
+                settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryMoved, assetEntry, true);
+            }
+        }
+
+        private static void ConfigureGroupSchema(AddressableAssetSettings settings, AddressableAssetGroup variantGroup)
+        {
+            BundledAssetGroupSchema groupSchema = variantGroup.GetSchema<BundledAssetGroupSchema>();
+            if (groupSchema == null)
+            {
+                groupSchema = variantGroup.AddSchema<BundledAssetGroupSchema>();
+            }
+
+            groupSchema.UseAssetBundleCache = true;
+            groupSchema.UseAssetBundleCrc = false;
+            groupSchema.IncludeInBuild = false;
+            groupSchema.RetryCount = 3;
+            groupSchema.BundleNaming = BundledAssetGroupSchema.BundleNamingStyle.FileNameHash;
+            groupSchema.BundleMode = BundledAssetGroupSchema.BundlePackingMode.PackTogether;
+            groupSchema.Compression = BundledAssetGroupSchema.BundleCompressionMode.LZ4;
+            groupSchema.BuildPath.SetVariableByName(settings, AddressableAssetSettings.kLocalBuildPath);
+            groupSchema.LoadPath.SetVariableByName(settings, AddressableAssetSettings.kLocalLoadPath);
         }
 
 
@@ -243,15 +401,6 @@ namespace mtion.room.sdk
                 settings.SetDirty(AddressableAssetSettings.ModificationEvent.GroupRemoved, entry, true);
             }
 
-            TrySetAddressablesString(settings, "ShaderBundleCustomNaming", "");
-            TrySetAddressablesString(settings, "MonoScriptBundleCustomNaming", "");
-            settings.BuildRemoteCatalog = false;
-            settings.DisableCatalogUpdateOnStartup = false;
-            settings.ContiguousBundles = false;
-            settings.IgnoreUnsupportedFilesInBuild = false;
-            TrySetAddressablesEnum(settings, "ShaderBundleNaming", "UnityEditor.AddressableAssets.Settings.ShaderBundleNaming", "ProjectName");
-            TrySetAddressablesEnum(settings, "MonoScriptBundleNaming", "UnityEditor.AddressableAssets.Settings.MonoScriptBundleNaming", "Disabled");
-
             AssetDatabase.SaveAssets();
         }
 
@@ -261,114 +410,113 @@ namespace mtion.room.sdk
             if (Directory.Exists(localUnityDirectory))
             {
                 Directory.Delete(localUnityDirectory, true);
-                Directory.CreateDirectory(localUnityDirectory);
             }
-
-            string defaultProfileID = AddressableAssetSettingsDefaultObject.Settings.activeProfileId;
+            Directory.CreateDirectory(localUnityDirectory);
 
             AddressableAssetSettings settings = AddressableAssetSettingsDefaultObject.GetSettings(true);
-            settings.BuildRemoteCatalog = true;
-            settings.DisableCatalogUpdateOnStartup = true;
-            settings.ContiguousBundles = true;
-            settings.IgnoreUnsupportedFilesInBuild = true;
-            TrySetAddressablesEnum(settings, "ShaderBundleNaming", "UnityEditor.AddressableAssets.Settings.ShaderBundleNaming", "DefaultGroupGuid");
-            TrySetAddressablesEnum(settings, "MonoScriptBundleNaming", "UnityEditor.AddressableAssets.Settings.MonoScriptBundleNaming", "DefaultGroupGuid");
+            AddressablesBuildStateSnapshot buildState = CaptureAddressablesBuildState(settings);
 
-            string groupProfileName = SDKUtil.GetAddressableGroupName(assetBase);
-
-            BuildTarget mainTarget = BuildTarget.StandaloneWindows64;
-            EditorUserBuildSettings.selectedStandaloneTarget = mainTarget;
-            PlayerSettings.SetScriptingBackend(BuildTargetGroup.Standalone, ScriptingImplementation.Mono2x); // TODO: Should see about chaning this to il2cpp
-            AssetDatabase.SaveAssets();
-
-            List<Tuple<BuildTargetGroup, BuildTarget>> targets = new List<Tuple<BuildTargetGroup, BuildTarget>>();
-            bool allTargets = true;
-            if (allTargets)
+            try
             {
-                targets.Add(new Tuple<BuildTargetGroup, BuildTarget>(BuildTargetGroup.Standalone, BuildTarget.StandaloneWindows64));
-            }
-            else
-            {
-                targets.Add(new Tuple<BuildTargetGroup, BuildTarget>(BuildTargetGroup.Standalone, mainTarget));
-            }
+                EnsureJsonCatalogConfiguration(settings);
 
+                settings.BuildRemoteCatalog = true;
+                settings.DisableCatalogUpdateOnStartup = true;
+                settings.ContiguousBundles = true;
+                settings.IgnoreUnsupportedFilesInBuild = true;
+                TrySetBuiltInBundleNaming(settings, "Custom");
+                TrySetAddressablesEnum(settings, "MonoScriptBundleNaming", "UnityEditor.AddressableAssets.Build.MonoScriptBundleNaming", "Custom");
 
-            Dictionary<string, bool> buildStatusMap = new Dictionary<string, bool>();
-            settings.groups.ForEach(group =>
-            {
-                if (group.ReadOnly) return;
-                buildStatusMap.Add(group.name, group.GetSchema<BundledAssetGroupSchema>().IncludeInBuild);
-            });
+                string groupProfileName = SDKUtil.GetAddressableGroupName(assetBase);
 
-            foreach (Tuple<BuildTargetGroup, BuildTarget> target in targets)
-            {
-                while (EditorApplication.isUpdating)
+                BuildTarget mainTarget = BuildTarget.StandaloneWindows64;
+                EditorUserBuildSettings.selectedStandaloneTarget = mainTarget;
+                AssetDatabase.SaveAssets();
+
+                List<Tuple<BuildTargetGroup, BuildTarget>> targets = new List<Tuple<BuildTargetGroup, BuildTarget>>
                 {
-                    Thread.Sleep(10);
-                }
+                    new Tuple<BuildTargetGroup, BuildTarget>(BuildTargetGroup.Standalone, BuildTarget.StandaloneWindows64)
+                };
 
-                EditorUserBuildSettings.SwitchActiveBuildTarget(target.Item1, target.Item2);
-
-                AddressableAssetProfileSettings profile = settings.profileSettings;
-                string profileId = profile.GetProfileId(groupProfileName);
-                if (string.IsNullOrEmpty(profileId))
+                foreach (Tuple<BuildTargetGroup, BuildTarget> target in targets)
                 {
-                    EditorUtility.DisplayDialog("Error", $"No profile ID associated with room name.", "ok");
-                    return;
-                }
-
-                settings.activeProfileId = profileId;
-
-                settings.groups.ForEach(group =>
-                {
-                    if (group.ReadOnly) return;
-
-                    group.GetSchema<BundledAssetGroupSchema>().IncludeInBuild = group.name == groupProfileName;
-
-                    if (group.name == groupProfileName && group.CanBeSetAsDefault()) settings.DefaultGroup = group;
-                });
-
-                BundledAssetGroupSchema schema = settings.groups.First(group => @group.name == groupProfileName).GetSchema<BundledAssetGroupSchema>();
-                settings.RemoteCatalogBuildPath = schema.BuildPath;
-                settings.RemoteCatalogLoadPath = schema.LoadPath;
-                TrySetAddressablesString(settings, "ShaderBundleCustomNaming", groupProfileName);
-                TrySetAddressablesString(settings, "MonoScriptBundleCustomNaming", groupProfileName);
-
-                AddressableAssetSettings.BuildPlayerContent(out AddressablesPlayerBuildResult result);
-                bool success = string.IsNullOrEmpty(result.Error);
-
-                if (!success)
-                {
-                    Debug.LogError("Addressables build error encountered: " + result.Error);
-                    throw new Exception(result.Error);
-                }
-            }
-
-            {
-                bool resetDefault = true;
-                settings.activeProfileId = defaultProfileID;
-
-                settings.groups.ForEach(group =>
-                {
-                    if (group.ReadOnly) return;
-                    group.GetSchema<BundledAssetGroupSchema>().IncludeInBuild = buildStatusMap[group.name];
-
-                    if (resetDefault && group.CanBeSetAsDefault())
+                    while (EditorApplication.isUpdating)
                     {
-                        settings.DefaultGroup = group;
-                        resetDefault = false;
+                        Thread.Sleep(10);
                     }
-                });
+
+                    EditorUserBuildSettings.SwitchActiveBuildTarget(target.Item1, target.Item2);
+
+                    AddressableAssetProfileSettings profile = settings.profileSettings;
+                    string profileId = profile.GetProfileId(groupProfileName);
+                    if (string.IsNullOrEmpty(profileId))
+                    {
+                        throw new InvalidOperationException("No addressables profile ID associated with the export group.");
+                    }
+
+                    settings.activeProfileId = profileId;
+
+                    settings.groups.ForEach(group =>
+                    {
+                        if (group.ReadOnly)
+                        {
+                            return;
+                        }
+
+                        BundledAssetGroupSchema groupSchema = group.GetSchema<BundledAssetGroupSchema>();
+                        if (groupSchema == null)
+                        {
+                            return;
+                        }
+
+                        groupSchema.IncludeInBuild = group.name == groupProfileName;
+
+                        if (group.name == groupProfileName && group.CanBeSetAsDefault())
+                        {
+                            settings.DefaultGroup = group;
+                        }
+                    });
+
+                    BundledAssetGroupSchema schema = settings.groups.First(group => @group.name == groupProfileName).GetSchema<BundledAssetGroupSchema>();
+                    settings.RemoteCatalogBuildPath = schema.BuildPath;
+                    settings.RemoteCatalogLoadPath = schema.LoadPath;
+                    TrySetBuiltInBundleCustomNaming(settings, groupProfileName);
+                    TrySetAddressablesString(settings, "MonoScriptBundleCustomNaming", groupProfileName);
+
+                    AddressableAssetSettings.BuildPlayerContent(out AddressablesPlayerBuildResult result);
+                    bool success = string.IsNullOrEmpty(result.Error);
+
+                    if (!success)
+                    {
+                        VisualScriptingGeneratedDataAuditResult auditResult = VisualScriptingProjectPreflight.AuditGeneratedData();
+                        string errorMessage = result.Error;
+                        if (!auditResult.IsHealthy)
+                        {
+                            errorMessage = $"{errorMessage} {auditResult.GetSummary()}";
+                        }
+
+                        Debug.LogError("Addressables build error encountered: " + errorMessage);
+                        throw new Exception(errorMessage);
+                    }
+                }
+
+                AssetDatabase.SaveAssets();
+
+                RenameCatalogs(localUnityDirectory, targets);
+                EnsureCanonicalCatalogFiles(localUnityDirectory, targets);
+                NormalizeCatalogLoadPaths(localUnityDirectory, targets);
+                EnsureCanonicalCatalogFiles(localUnityDirectory, targets);
+                EnsureJsonCatalogFiles(localUnityDirectory, targets);
+
+                onExportComplete?.Invoke();
             }
-
-            AssetDatabase.SaveAssets();
-
-            RenameCatalogs(localUnityDirectory, targets);
-
-            onExportComplete?.Invoke();
+            finally
+            {
+                RestoreAddressablesBuildState(settings, buildState);
+                AssetDatabase.SaveAssets();
+            }
         }
 
-        // Helpers for Addressables API differences across versions
         private static void TrySetAddressablesString(AddressableAssetSettings settings, string propertyName, string value)
         {
             var prop = settings.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
@@ -378,59 +526,45 @@ namespace mtion.room.sdk
             }
         }
 
-        private static void TrySetAddressablesEnum(AddressableAssetSettings settings, string propertyName, string enumTypeFullName, string enumFieldName)
+        private static void TrySetBuiltInBundleNaming(AddressableAssetSettings settings, string enumFieldName)
+        {
+            if (TrySetAddressablesEnum(settings, "BuiltInBundleNaming", "UnityEditor.AddressableAssets.Build.BuiltInBundleNaming", enumFieldName))
+            {
+                return;
+            }
+
+            TrySetAddressablesEnum(settings, "ShaderBundleNaming", "UnityEditor.AddressableAssets.Settings.ShaderBundleNaming", enumFieldName);
+        }
+
+        private static void TrySetBuiltInBundleCustomNaming(AddressableAssetSettings settings, string value)
+        {
+            var prop = settings.GetType().GetProperty("BuiltInBundleCustomNaming", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (prop != null && prop.PropertyType == typeof(string) && prop.CanWrite)
+            {
+                prop.SetValue(settings, value);
+                return;
+            }
+
+            TrySetAddressablesString(settings, "ShaderBundleCustomNaming", value);
+        }
+
+        private static bool TrySetAddressablesEnum(AddressableAssetSettings settings, string propertyName, string enumTypeFullName, string enumFieldName)
         {
             var asm = typeof(AddressableAssetSettings).Assembly;
             var enumType = asm.GetType(enumTypeFullName);
-            if (enumType == null || !enumType.IsEnum) return;
+            if (enumType == null || !enumType.IsEnum) return false;
             var prop = settings.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            if (prop == null || !prop.CanWrite) return;
+            if (prop == null || !prop.CanWrite) return false;
             try
             {
                 var value = Enum.Parse(enumType, enumFieldName);
                 prop.SetValue(settings, value);
+                return true;
             }
-            catch { /* ignore if field missing */ }
-        }
-
-        private static void ExportAsGLTF(MTIONSDKAssetBase assetBase, ExportLocationOptions exportLocationOptions, Action onExportComplete)
-        {
-            var baseDirector = SDKUtil.GetSDKItemDirectory(assetBase, exportLocationOptions);
-            var localWebGLDirectory = SDKUtil.GetSDKLocalWebGLBuildPath(assetBase, exportLocationOptions);
-            if (Directory.Exists(localWebGLDirectory))
+            catch
             {
-                Directory.Delete(localWebGLDirectory, true);
-                Directory.CreateDirectory(localWebGLDirectory);
+                return false;
             }
-
-            var fileName = $"{SDKUtil.GetGLTFGuid(assetBase)}.glb";
-            var filePath = Path.Combine(localWebGLDirectory, fileName).Replace('\\', '/');
-            if (SafeFileIO.Exists(filePath))
-            {
-                SafeFileIO.Delete(filePath);
-            }
-
-            var exportOptions = new ExportOptions { TexturePathRetriever = GLTFExportMenu.RetrieveTexturePath };
-
-            var originalPosition = assetBase.ObjectReferenceProp.transform.position;
-            var originalRotation = assetBase.ObjectReferenceProp.transform.rotation;
-            var originalScale = assetBase.ObjectReferenceProp.transform.localScale;
-
-            assetBase.ObjectReferenceProp.transform.position = Vector3.zero;
-            assetBase.ObjectReferenceProp.transform.rotation = Quaternion.identity;
-            assetBase.ObjectReferenceProp.transform.localScale = Vector3.one;
-
-            var transforms = new Transform[] { assetBase.ObjectReferenceProp.transform };
-            var exporter = new GLTFSceneExporter(transforms, exportOptions);
-
-            GLTFSceneExporter.SaveFolderPath = localWebGLDirectory;
-            exporter.SaveGLB(localWebGLDirectory, fileName);
-
-            assetBase.ObjectReferenceProp.transform.position = originalPosition;
-            assetBase.ObjectReferenceProp.transform.rotation = originalRotation;
-            assetBase.ObjectReferenceProp.transform.localScale = originalScale;
-
-            onExportComplete?.Invoke();
         }
 
         private static void ExportLightmapData(MTIONSDKAssetBase assetBase, ExportLocationOptions exportLocationOptions, Action onExportComplete)
@@ -465,15 +599,401 @@ namespace mtion.room.sdk
                 {
                     foreach (string extension in new[] { "hash", "json" })
                     {
-                        string[] files = Directory.GetFiles(targetPath, "catalog_*." + extension, SearchOption.AllDirectories);
+                        string[] files = Directory.GetFiles(targetPath, "catalog*." + extension, SearchOption.AllDirectories)
+                            .Concat(Directory.GetFiles(targetPath, "*catalog*." + extension, SearchOption.AllDirectories))
+                            .Distinct(StringComparer.OrdinalIgnoreCase)
+                            .ToArray();
                         foreach (string file in files)
                         {
                             string targetFile = Path.GetDirectoryName(file) + "/catalog." + extension;
+                            if (string.Equals(file.Replace('\\', '/'), targetFile, StringComparison.OrdinalIgnoreCase))
+                            {
+                                continue;
+                            }
                             if (SafeFileIO.Exists(targetFile)) FileUtil.DeleteFileOrDirectory(targetFile);
                             FileUtil.MoveFileOrDirectory(file, targetFile);
                         }
                     }
                 }
+            }
+        }
+
+        private static void EnsureCanonicalCatalogFiles(string path, List<Tuple<BuildTargetGroup, BuildTarget>> targets)
+        {
+            if (!Directory.Exists(path))
+            {
+                return;
+            }
+
+            foreach (var target in targets)
+            {
+                string buildTarget = SDKUtil.GetBuildTargetDirectory(target.Item2 == BuildTarget.WebGL ? SDKBuildTarget.WebGL : SDKBuildTarget.StandaloneWindows);
+                string targetPath = Path.Combine(path, buildTarget).Replace('\\', '/');
+                if (!Directory.Exists(targetPath))
+                {
+                    continue;
+                }
+
+                EnsureCanonicalCatalogFile(targetPath, "json");
+                EnsureCanonicalCatalogFile(targetPath, "hash");
+            }
+        }
+
+        private static void EnsureJsonCatalogFiles(string path, List<Tuple<BuildTargetGroup, BuildTarget>> targets)
+        {
+            foreach (var target in targets)
+            {
+                string buildTarget = SDKUtil.GetBuildTargetDirectory(target.Item2 == BuildTarget.WebGL ? SDKBuildTarget.WebGL : SDKBuildTarget.StandaloneWindows);
+                string targetPath = Path.Combine(path, buildTarget).Replace('\\', '/');
+                if (!Directory.Exists(targetPath))
+                {
+                    continue;
+                }
+
+                string jsonCatalog = Path.Combine(targetPath, "catalog.json").Replace('\\', '/');
+                if (File.Exists(jsonCatalog))
+                {
+                    continue;
+                }
+
+                string[] binaryCatalogs = Directory.GetFiles(targetPath, "catalog*.bin", SearchOption.AllDirectories)
+                    .Concat(Directory.GetFiles(targetPath, "*catalog*.bin", SearchOption.AllDirectories))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+
+                if (binaryCatalogs.Length > 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Addressables built a binary catalog for {buildTarget}. This project requires JSON catalogs. Ensure Addressables 'Enable Json Catalog' is enabled, the Standalone scripting define '{EnableJsonCatalogDefine}' is present, Unity has recompiled, and rerun export.");
+                }
+
+                throw new InvalidOperationException($"Addressables build did not produce catalog.json for {buildTarget}.");
+            }
+        }
+
+        private static void EnsureCanonicalCatalogFile(string targetPath, string extension)
+        {
+            string expectedPath = Path.Combine(targetPath, $"catalog.{extension}").Replace('\\', '/');
+            if (File.Exists(expectedPath))
+            {
+                return;
+            }
+
+            for (int attempt = 0; attempt < 20; attempt++)
+            {
+                string candidatePath = FindBestCatalogCandidate(targetPath, extension, expectedPath);
+                if (!string.IsNullOrWhiteSpace(candidatePath))
+                {
+                    if (!string.Equals(candidatePath, expectedPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (File.Exists(expectedPath))
+                        {
+                            File.Delete(expectedPath);
+                        }
+
+                        File.Move(candidatePath, expectedPath);
+                    }
+
+                    if (File.Exists(expectedPath))
+                    {
+                        return;
+                    }
+                }
+
+                Thread.Sleep(100);
+            }
+        }
+
+        private static string FindBestCatalogCandidate(string targetPath, string extension, string expectedPath)
+        {
+            List<string> candidates = Directory.GetFiles(targetPath, $"catalog*.{extension}", SearchOption.AllDirectories)
+                .Concat(Directory.GetFiles(targetPath, $"*catalog*.{extension}", SearchOption.AllDirectories))
+                .Select(path => path.Replace('\\', '/'))
+                .Where(path => !string.Equals(path, expectedPath, StringComparison.OrdinalIgnoreCase))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (candidates.Count == 0)
+            {
+                List<string> fallbackCandidates = Directory.GetFiles(targetPath, $"*.{extension}", SearchOption.AllDirectories)
+                    .Select(path => path.Replace('\\', '/'))
+                    .Where(path => !string.Equals(path, expectedPath, StringComparison.OrdinalIgnoreCase))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                if (fallbackCandidates.Count == 1)
+                {
+                    candidates.Add(fallbackCandidates[0]);
+                }
+            }
+
+            return candidates
+                .OrderBy(path => !string.Equals(Path.GetDirectoryName(path)?.Replace('\\', '/'), targetPath, StringComparison.OrdinalIgnoreCase))
+                .ThenBy(path => !Path.GetFileName(path).StartsWith("catalog", StringComparison.OrdinalIgnoreCase))
+                .ThenByDescending(path => new FileInfo(path).Length)
+                .ThenByDescending(path => File.GetLastWriteTimeUtc(path))
+                .FirstOrDefault();
+        }
+
+        private static void EnsureJsonCatalogConfiguration(AddressableAssetSettings settings)
+        {
+            if (settings == null)
+            {
+                throw new InvalidOperationException("Addressables settings are missing.");
+            }
+
+            bool changedSettings = false;
+            if (!settings.EnableJsonCatalog)
+            {
+                settings.EnableJsonCatalog = true;
+                changedSettings = true;
+            }
+
+            if (TryGetAddressablesBool(settings, "BundleLocalCatalog") != false)
+            {
+                TrySetAddressablesBool(settings, "BundleLocalCatalog", false);
+                changedSettings = true;
+            }
+
+            if (changedSettings)
+            {
+                AssetDatabase.SaveAssets();
+            }
+
+            string standaloneSymbols = PlayerSettings.GetScriptingDefineSymbolsForGroup(BuildTargetGroup.Standalone) ?? string.Empty;
+            if (!HasDefineSymbol(standaloneSymbols, EnableJsonCatalogDefine))
+            {
+                string updatedSymbols = string.IsNullOrWhiteSpace(standaloneSymbols)
+                    ? EnableJsonCatalogDefine
+                    : $"{standaloneSymbols};{EnableJsonCatalogDefine}";
+                PlayerSettings.SetScriptingDefineSymbolsForGroup(BuildTargetGroup.Standalone, updatedSymbols);
+                AssetDatabase.SaveAssets();
+                throw new InvalidOperationException(
+                    $"Enabled the '{EnableJsonCatalogDefine}' scripting define for Standalone. Wait for Unity to finish recompiling scripts, then rerun export.");
+            }
+
+            if (!EditorCompiledWithJsonCatalog)
+            {
+                throw new InvalidOperationException(
+                    $"The editor is currently compiled without '{EnableJsonCatalogDefine}'. Wait for Unity to finish recompiling scripts, then rerun export.");
+            }
+        }
+
+        private static bool HasDefineSymbol(string defineSymbols, string symbol)
+        {
+            return defineSymbols.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
+                .Any(entry => string.Equals(entry.Trim(), symbol, StringComparison.Ordinal));
+        }
+
+        private static bool? TryGetAddressablesBool(AddressableAssetSettings settings, string propertyName)
+        {
+            var prop = settings.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (prop == null || !prop.CanRead || prop.PropertyType != typeof(bool))
+            {
+                return null;
+            }
+
+            return (bool)prop.GetValue(settings);
+        }
+
+        private static bool TrySetAddressablesBool(AddressableAssetSettings settings, string propertyName, bool value)
+        {
+            var prop = settings.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (prop == null || !prop.CanWrite || prop.PropertyType != typeof(bool))
+            {
+                return false;
+            }
+
+            prop.SetValue(settings, value);
+            return true;
+        }
+
+        private static void NormalizeCatalogLoadPaths(string path, List<Tuple<BuildTargetGroup, BuildTarget>> targets)
+        {
+            if (!Directory.Exists(path)) return;
+
+            foreach (var target in targets)
+            {
+                string buildTarget = SDKUtil.GetBuildTargetDirectory(target.Item2 == BuildTarget.WebGL ? SDKBuildTarget.WebGL : SDKBuildTarget.StandaloneWindows);
+                string targetPath = Path.Combine(path, buildTarget).Replace('\\', '/');
+
+                if (!Directory.Exists(targetPath))
+                {
+                    continue;
+                }
+
+                string[] catalogFiles = Directory.GetFiles(targetPath, "catalog*.json", SearchOption.AllDirectories);
+                foreach (string catalogFile in catalogFiles)
+                {
+                    string text = File.ReadAllText(catalogFile);
+                    string normalizedText = text.Replace($"{SDKUtil.LOAD_URL}\\\\", $"{SDKUtil.LOAD_URL}/");
+                    if (!string.Equals(text, normalizedText, StringComparison.Ordinal))
+                    {
+                        File.WriteAllText(catalogFile, normalizedText);
+                    }
+                }
+            }
+        }
+
+        private AddressablesBuildStateSnapshot CaptureAddressablesBuildState(AddressableAssetSettings settings)
+        {
+            AddressablesBuildStateSnapshot snapshot = new AddressablesBuildStateSnapshot
+            {
+                ActiveProfileId = settings.activeProfileId,
+                RemoteCatalogBuildPath = TryGetAddressablesProperty(settings, "RemoteCatalogBuildPath"),
+                RemoteCatalogLoadPath = TryGetAddressablesProperty(settings, "RemoteCatalogLoadPath"),
+                BuildRemoteCatalog = settings.BuildRemoteCatalog,
+                DisableCatalogUpdateOnStartup = settings.DisableCatalogUpdateOnStartup,
+                ContiguousBundles = settings.ContiguousBundles,
+                IgnoreUnsupportedFilesInBuild = settings.IgnoreUnsupportedFilesInBuild,
+                DefaultGroupName = settings.DefaultGroup != null ? settings.DefaultGroup.name : null,
+                ActiveBuildTarget = EditorUserBuildSettings.activeBuildTarget,
+                ActiveBuildTargetGroup = BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget),
+                SelectedStandaloneTarget = EditorUserBuildSettings.selectedStandaloneTarget,
+                StandaloneScriptingBackend = PlayerSettings.GetScriptingBackend(BuildTargetGroup.Standalone),
+                BuiltInBundleCustomNaming = TryGetAddressablesString(settings, "BuiltInBundleCustomNaming"),
+                ShaderBundleCustomNaming = TryGetAddressablesString(settings, "ShaderBundleCustomNaming"),
+                MonoScriptBundleCustomNaming = TryGetAddressablesString(settings, "MonoScriptBundleCustomNaming"),
+                BuiltInBundleNaming = TryGetAddressablesProperty(settings, "BuiltInBundleNaming"),
+                ShaderBundleNaming = TryGetAddressablesProperty(settings, "ShaderBundleNaming"),
+                MonoScriptBundleNaming = TryGetAddressablesProperty(settings, "MonoScriptBundleNaming"),
+            };
+
+            settings.groups.ForEach(group =>
+            {
+                if (group.ReadOnly)
+                {
+                    return;
+                }
+
+                BundledAssetGroupSchema schema = group.GetSchema<BundledAssetGroupSchema>();
+                if (schema != null)
+                {
+                    snapshot.IncludeInBuildByGroupName[group.name] = schema.IncludeInBuild;
+                }
+            });
+
+            return snapshot;
+        }
+
+        private void RestoreAddressablesBuildState(AddressableAssetSettings settings, AddressablesBuildStateSnapshot snapshot)
+        {
+            if (settings == null || snapshot == null)
+            {
+                return;
+            }
+
+            settings.activeProfileId = snapshot.ActiveProfileId;
+            settings.BuildRemoteCatalog = snapshot.BuildRemoteCatalog;
+            settings.DisableCatalogUpdateOnStartup = snapshot.DisableCatalogUpdateOnStartup;
+            settings.ContiguousBundles = snapshot.ContiguousBundles;
+            settings.IgnoreUnsupportedFilesInBuild = snapshot.IgnoreUnsupportedFilesInBuild;
+
+            TrySetAddressablesProperty(settings, "RemoteCatalogBuildPath", snapshot.RemoteCatalogBuildPath);
+            TrySetAddressablesProperty(settings, "RemoteCatalogLoadPath", snapshot.RemoteCatalogLoadPath);
+
+            foreach (AddressableAssetGroup group in settings.groups)
+            {
+                if (group.ReadOnly)
+                {
+                    continue;
+                }
+
+                BundledAssetGroupSchema schema = group.GetSchema<BundledAssetGroupSchema>();
+                if (schema == null)
+                {
+                    continue;
+                }
+
+                if (snapshot.IncludeInBuildByGroupName.TryGetValue(group.name, out bool includeInBuild))
+                {
+                    schema.IncludeInBuild = includeInBuild;
+                }
+
+                if (!string.IsNullOrEmpty(snapshot.DefaultGroupName) && group.name == snapshot.DefaultGroupName && group.CanBeSetAsDefault())
+                {
+                    settings.DefaultGroup = group;
+                }
+            }
+
+            if (snapshot.BuiltInBundleNaming != null)
+            {
+                TrySetAddressablesProperty(settings, "BuiltInBundleNaming", snapshot.BuiltInBundleNaming);
+            }
+
+            if (snapshot.ShaderBundleNaming != null)
+            {
+                TrySetAddressablesProperty(settings, "ShaderBundleNaming", snapshot.ShaderBundleNaming);
+            }
+
+            if (snapshot.MonoScriptBundleNaming != null)
+            {
+                TrySetAddressablesProperty(settings, "MonoScriptBundleNaming", snapshot.MonoScriptBundleNaming);
+            }
+
+            TrySetAddressablesString(settings, "BuiltInBundleCustomNaming", snapshot.BuiltInBundleCustomNaming ?? string.Empty);
+            TrySetAddressablesString(settings, "ShaderBundleCustomNaming", snapshot.ShaderBundleCustomNaming ?? string.Empty);
+            TrySetAddressablesString(settings, "MonoScriptBundleCustomNaming", snapshot.MonoScriptBundleCustomNaming ?? string.Empty);
+
+            if (EditorUserBuildSettings.activeBuildTarget != snapshot.ActiveBuildTarget)
+            {
+                EditorUserBuildSettings.SwitchActiveBuildTarget(snapshot.ActiveBuildTargetGroup, snapshot.ActiveBuildTarget);
+            }
+
+            EditorUserBuildSettings.selectedStandaloneTarget = snapshot.SelectedStandaloneTarget;
+            PlayerSettings.SetScriptingBackend(BuildTargetGroup.Standalone, snapshot.StandaloneScriptingBackend);
+        }
+
+        private static string TryGetAddressablesString(AddressableAssetSettings settings, string propertyName)
+        {
+            object value = TryGetAddressablesProperty(settings, propertyName);
+            return value as string;
+        }
+
+        private static object TryGetAddressablesProperty(AddressableAssetSettings settings, string propertyName)
+        {
+            var prop = settings.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            return prop != null && prop.CanRead ? prop.GetValue(settings) : null;
+        }
+
+        private static bool TrySetAddressablesProperty(AddressableAssetSettings settings, string propertyName, object value)
+        {
+            var prop = settings.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (prop == null || !prop.CanWrite || value == null || !prop.PropertyType.IsInstanceOfType(value))
+            {
+                return false;
+            }
+
+            prop.SetValue(settings, value);
+            return true;
+        }
+
+        private void CleanupGeneratedUnityAssets()
+        {
+            if (!string.IsNullOrWhiteSpace(assetBase.AddressableID))
+            {
+                AssetDatabase.DeleteAsset(assetBase.AddressableID);
+            }
+
+            if (assetBase.ObjectType == MTIONObjectType.MTIONSDK_ENVIRONMENT)
+            {
+                string lightmapDirectory = SDKUtil.GetAssetLightmapDirectory(assetBase);
+                if (AssetDatabase.IsValidFolder(lightmapDirectory))
+                {
+                    AssetDatabase.DeleteAsset(lightmapDirectory);
+                }
+            }
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+        }
+
+        private void DeleteLegacyGLTFArtifacts()
+        {
+            string webglDirectory = Path.Combine(SDKUtil.GetSDKItemDirectory(assetBase, exportLocationOptions), "webgl").Replace('\\', '/');
+            if (Directory.Exists(webglDirectory))
+            {
+                Directory.Delete(webglDirectory, true);
             }
         }
     }

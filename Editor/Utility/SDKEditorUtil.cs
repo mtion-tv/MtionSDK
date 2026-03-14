@@ -27,8 +27,8 @@ namespace mtion.room.sdk
             var sdkBlueprint = blueprintDescriptorObject.AddComponent<MTIONSDKBlueprint>();
 
             SDKEditorUtil.InitAddressableAssetFields(sdkBlueprint, MTIONObjectType.MTIONSDK_BLUEPRINT, roomScene.name);
-            sdkBlueprint.RoomSceneName = roomScene.name;
-            sdkBlueprint.EnvironmentSceneName = environmentScene.name;
+            sdkBlueprint.SetRoomSceneReference(roomScene);
+            sdkBlueprint.SetEnvironmentSceneReference(environmentScene);
 
             var sdkRoom = sdkBlueprint.GetMTIONSDKRoom();
             var sdkEnvironment = sdkBlueprint.GetMTIONSDKEnvironment();

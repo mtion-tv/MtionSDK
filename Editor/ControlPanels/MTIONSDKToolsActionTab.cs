@@ -3,13 +3,25 @@ using System.Reflection;
 using mtion.room.sdk;
 using mtion.room.sdk.action;
 using mtion.room.sdk.compiled;
+using mtion.room.sdk.visualscripting;
 using UnityEditor;
 using UnityEngine;
 
 public static class MTIONSDKToolsActionTab
 {
+    private sealed class SDKEntryPointRow
+    {
+        public string DisplayName;
+        public string EntryPointId;
+        public string TargetLabel;
+        public GameObject TargetObject;
+    }
+
     private static MActionBehaviourGroup _actionBehaviourContainer = null;
+    private static readonly List<SDKEntryPointRow> _sdkEntryPointRows = new List<SDKEntryPointRow>();
     private static Vector2 _scrollPos;
+    private static string _sdkEntryPointMessage;
+    private static bool _sdkEntryPointMessageIsWarning;
 
     public static void Refresh()
     {
@@ -18,6 +30,8 @@ public static class MTIONSDKToolsActionTab
 
     private static void VerifySceneState()
     {
+        RefreshSdkEntryPointState();
+
         GameObject descriptor = null;
         
         if (_actionBehaviourContainer == null)
@@ -286,6 +300,8 @@ public static class MTIONSDKToolsActionTab
 #if MTION_ADVANCED_ACTION_UI
         bool guiEnabled;
 #endif
+
+        DrawSdkEntryPointsSection();
         
         if (!BuildManager.IsSceneValid() || _actionBehaviourContainer == null)
         {
@@ -838,6 +854,133 @@ public static class MTIONSDKToolsActionTab
             }
             EndBox();
         }
+    }
+
+    private static void RefreshSdkEntryPointState()
+    {
+        _sdkEntryPointRows.Clear();
+        _sdkEntryPointMessage = null;
+        _sdkEntryPointMessageIsWarning = false;
+
+        GameObject descriptor = BuildManager.GetSceneDescriptor();
+        if (descriptor == null)
+        {
+            _sdkEntryPointMessage = "Initialize the scene under the Build tab to review SDK entry points.";
+            return;
+        }
+
+        MTIONSDKDescriptorSceneBase descriptorComponent = descriptor.GetComponent<MTIONSDKDescriptorSceneBase>();
+        if (descriptorComponent == null || descriptorComponent.ObjectReferenceProp == null)
+        {
+            _sdkEntryPointMessage = "The current SDK descriptor is missing its target object reference.";
+            _sdkEntryPointMessageIsWarning = true;
+            return;
+        }
+
+        GameObject sdkRoot = descriptorComponent.ObjectReferenceProp;
+        UVSSDKEntryPointRegistry registry = sdkRoot.GetComponentInChildren<UVSSDKEntryPointRegistry>(true);
+        if (registry == null)
+        {
+            _sdkEntryPointMessage = "No SDK entry points are currently synced. Add SDK Entry Point nodes in the graph, then run Configure UVS in the UVS tab.";
+            return;
+        }
+
+        if (registry.HasDuplicateDisplayNames(out List<string> duplicateDisplayNames))
+        {
+            _sdkEntryPointMessage = $"Duplicate SDK entry point display names detected: {string.Join(", ", duplicateDisplayNames)}. Run Configure UVS after fixing the graph entries.";
+            _sdkEntryPointMessageIsWarning = true;
+        }
+
+        IReadOnlyList<UVSSDKEntryPointDefinition> entryPoints = registry.EntryPoints;
+        for (int i = 0; i < entryPoints.Count; i++)
+        {
+            UVSSDKEntryPointDefinition entryPoint = entryPoints[i];
+            if (entryPoint == null || string.IsNullOrWhiteSpace(entryPoint.EntryPointId))
+            {
+                continue;
+            }
+
+            GameObject targetObject = registry.ResolveTargetGameObject(sdkRoot, entryPoint.EntryPointId);
+            _sdkEntryPointRows.Add(new SDKEntryPointRow
+            {
+                DisplayName = string.IsNullOrWhiteSpace(entryPoint.DisplayName)
+                    ? UVSSDKEntryPointConstants.DefaultDisplayName
+                    : entryPoint.DisplayName,
+                EntryPointId = entryPoint.EntryPointId,
+                TargetObject = targetObject,
+                TargetLabel = BuildTargetLabel(targetObject, entryPoint),
+            });
+        }
+
+        if (_sdkEntryPointRows.Count == 0 && string.IsNullOrWhiteSpace(_sdkEntryPointMessage))
+        {
+            _sdkEntryPointMessage = "No SDK entry points are currently synced. Add SDK Entry Point nodes in the graph, then run Configure UVS in the UVS tab.";
+        }
+    }
+
+    private static string BuildTargetLabel(GameObject targetObject, UVSSDKEntryPointDefinition entryPoint)
+    {
+        if (targetObject != null)
+        {
+            return targetObject.name;
+        }
+
+        if (!string.IsNullOrWhiteSpace(entryPoint.TargetRelativePathFromRoot))
+        {
+            return $"Missing target ({entryPoint.TargetRelativePathFromRoot})";
+        }
+
+        return "Root target";
+    }
+
+    private static void DrawSdkEntryPointsSection()
+    {
+        StartBox();
+        {
+            EditorGUILayout.LabelField("SDK Entry Points", MTIONSDKToolsWindow.BoxHeaderStyle);
+
+            if (!string.IsNullOrWhiteSpace(_sdkEntryPointMessage))
+            {
+                GUILayout.Space(6);
+                if (_sdkEntryPointMessageIsWarning)
+                {
+                    MTIONSDKToolsWindow.DrawWarning(_sdkEntryPointMessage);
+                }
+                else
+                {
+                    EditorGUILayout.LabelField(_sdkEntryPointMessage, MTIONSDKToolsWindow.LabelStyle);
+                }
+            }
+
+            if (_sdkEntryPointRows.Count > 0)
+            {
+                GUILayout.Space(8);
+                EditorGUILayout.LabelField($"Synced UVS entry points: {_sdkEntryPointRows.Count}", MTIONSDKToolsWindow.LabelStyle);
+                GUILayout.Space(6);
+
+                for (int i = 0; i < _sdkEntryPointRows.Count; i++)
+                {
+                    SDKEntryPointRow row = _sdkEntryPointRows[i];
+                    StartBox();
+                    {
+                        EditorGUILayout.BeginHorizontal();
+                        EditorGUILayout.LabelField(row.DisplayName, MTIONSDKToolsWindow.ListHeaderStyle);
+                        GUILayout.FlexibleSpace();
+                        if (row.TargetObject != null && GUILayout.Button("Ping", MTIONSDKToolsWindow.SmallButtonStyle, GUILayout.Width(60)))
+                        {
+                            Selection.activeObject = row.TargetObject;
+                            EditorGUIUtility.PingObject(row.TargetObject);
+                        }
+                        EditorGUILayout.EndHorizontal();
+
+                        EditorGUILayout.LabelField($"Target: {row.TargetLabel}", MTIONSDKToolsWindow.LabelStyle);
+                        EditorGUILayout.LabelField($"Entry ID: {row.EntryPointId}", MTIONSDKToolsWindow.LabelStyle);
+                    }
+                    EndBox();
+                }
+            }
+        }
+        EndBox();
     }
 
 

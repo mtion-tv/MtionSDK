@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace mtion.room.sdk.compiled
 {
@@ -42,7 +43,7 @@ namespace mtion.room.sdk.compiled
                     output[asset].Add("Description");
                 }
 
-                if (asset.ObjectReferenceProp == null)
+                if (asset.ObjectReference == null)
                 {
                     output[asset].Add("Object Reference");
                 }
@@ -118,25 +119,28 @@ namespace mtion.room.sdk.compiled
         }
 
         public static void VerifyAllComponentsIntegrity(MTIONSDKRoom roomSDKDescriptorObject,
-            MTIONObjectType sdkType, bool doServerCheck)
+            MTIONObjectType sdkType, bool doServerCheck, Scene targetScene = default(Scene))
         {
             VirtualComponentTracker[] components;
             switch (sdkType)
             {
                 case MTIONObjectType.MTIONSDK_CAMERA:
-                    components = GameObject.FindObjectsOfType<MVirtualCameraEventTracker>();
+                    components = GameObject.FindObjectsOfType<MVirtualCameraEventTracker>()
+                        .Where(component => IsInTargetScene(component.gameObject, targetScene)).ToArray();
                     break;
                 case MTIONObjectType.MTIONSDK_DISPLAY:
-                    components = GameObject.FindObjectsOfType<MVirtualDisplayTracker>();
+                    components = GameObject.FindObjectsOfType<MVirtualDisplayTracker>()
+                        .Where(component => IsInTargetScene(component.gameObject, targetScene)).ToArray();
                     break;
                 case MTIONObjectType.MTIONSDK_LIGHT:
-                    components = GameObject.FindObjectsOfType<MVirtualLightingTracker>();
+                    components = GameObject.FindObjectsOfType<MVirtualLightingTracker>()
+                        .Where(component => IsInTargetScene(component.gameObject, targetScene)).ToArray();
                     break;
                 case MTIONObjectType.MTIONSDK_ASSET:
-                    VerifyAllAssetsIntegrity(roomSDKDescriptorObject, doServerCheck);
+                    VerifyAllAssetsIntegrity(roomSDKDescriptorObject, doServerCheck, targetScene);
                     return;
                 case MTIONObjectType.MTIONSDK_AVATAR:
-                    VerifyAllAvatarIntegrity(roomSDKDescriptorObject, doServerCheck);
+                    VerifyAllAvatarIntegrity(roomSDKDescriptorObject, doServerCheck, targetScene);
                     return;
                 default:
                     return;
@@ -159,11 +163,12 @@ namespace mtion.room.sdk.compiled
             }
         }
 
-        private static void VerifyAllAssetsIntegrity(MTIONSDKRoom roomSDKDescriptorObject, bool doServerCheck = false)
+        private static void VerifyAllAssetsIntegrity(MTIONSDKRoom roomSDKDescriptorObject, bool doServerCheck = false, Scene targetScene = default(Scene))
         {
             if (doServerCheck)
             {
-                var virtualAssetsPass0 = GameObject.FindObjectsOfType<MVirtualAssetTracker>();
+                var virtualAssetsPass0 = GameObject.FindObjectsOfType<MVirtualAssetTracker>()
+                    .Where(asset => IsInTargetScene(asset.gameObject, targetScene)).ToArray();
                 for (int i = 0; i < virtualAssetsPass0.Length; ++i)
                 {
                     var asset = virtualAssetsPass0[i];
@@ -175,13 +180,15 @@ namespace mtion.room.sdk.compiled
                 }
             }
 
-            var virtualAssetsPass1 = GameObject.FindObjectsOfType<MVirtualAssetTracker>();
+            var virtualAssetsPass1 = GameObject.FindObjectsOfType<MVirtualAssetTracker>()
+                .Where(asset => IsInTargetScene(asset.gameObject, targetScene)).ToArray();
             for (int i = 0; i < virtualAssetsPass1.Length; ++i)
             {
                 WrapAsset(virtualAssetsPass1[i], roomSDKDescriptorObject);
             }
 
-            var virtualAssetsPass2 = GameObject.FindObjectsOfType<MVirtualAssetTracker>();
+            var virtualAssetsPass2 = GameObject.FindObjectsOfType<MVirtualAssetTracker>()
+                .Where(asset => IsInTargetScene(asset.gameObject, targetScene)).ToArray();
             foreach (var asset in virtualAssetsPass2)
             {
                 asset.ObjectReference = asset.gameObject;
@@ -189,7 +196,8 @@ namespace mtion.room.sdk.compiled
                 CollectAssetCustomProperties(asset);
             }
 
-            var virtualAssetsPass3 = GameObject.FindObjectsOfType<MVirtualAssetTracker>();
+            var virtualAssetsPass3 = GameObject.FindObjectsOfType<MVirtualAssetTracker>()
+                .Where(asset => IsInTargetScene(asset.gameObject, targetScene)).ToArray();
             var filteredDuplicates = AssetComparisonUtil.FilterDuplicateAssets(
                 virtualAssetsPass3, roomSDKDescriptorObject.LocationOption);
 
@@ -199,11 +207,12 @@ namespace mtion.room.sdk.compiled
             }
         }
 
-        private static void VerifyAllAvatarIntegrity(MTIONSDKRoom roomSDKDescriptorObject, bool doServerCheck = false)
+        private static void VerifyAllAvatarIntegrity(MTIONSDKRoom roomSDKDescriptorObject, bool doServerCheck = false, Scene targetScene = default(Scene))
         {
             if (doServerCheck)
             {
-                var virtualAvatarPass0 = GameObject.FindObjectsOfType<MVirtualAvatarTracker>();
+                var virtualAvatarPass0 = GameObject.FindObjectsOfType<MVirtualAvatarTracker>()
+                    .Where(asset => IsInTargetScene(asset.gameObject, targetScene)).ToArray();
                 for (int i = 0; i < virtualAvatarPass0.Length; ++i)
                 {
                     var asset = virtualAvatarPass0[i];
@@ -227,7 +236,6 @@ namespace mtion.room.sdk.compiled
                 var tracker = go.AddComponent<MVirtualAssetTracker>();
 
                 tracker.GUID = asset.GUID;
-                tracker.ExportGLTFEnabled = asset.ExportGLTFEnabled;
                 tracker.AssetParams = asset.AssetParams;
 
                 GameObject assetGo = asset.gameObject;
@@ -403,6 +411,11 @@ namespace mtion.room.sdk.compiled
             }
 
             return output;
+        }
+
+        private static bool IsInTargetScene(GameObject gameObject, Scene targetScene)
+        {
+            return !targetScene.IsValid() || gameObject.scene == targetScene;
         }
     }
 }

@@ -178,10 +178,15 @@ namespace mtion.room.sdk
     {
         private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths)
         {
-            var inPackages = importedAssets.Any(path => path.Contains("Packages/com.mtion.sdk/")) ||
-                deletedAssets.Any(path => path.Contains("Packages/com.mtion.sdk/")) ||
-                movedAssets.Any(path => path.Contains("Packages/com.mtion.sdk/")) ||
-                movedFromAssetPaths.Any(path => path.Contains("Packages/com.mtion.sdk/"));
+            bool IsSdkPath(string path)
+            {
+                return path.Contains("Packages/com.mtion.sdk/") || path.Contains("Assets/LocalPackages/MTIONStudioSDK/");
+            }
+
+            var inPackages = importedAssets.Any(IsSdkPath) ||
+                deletedAssets.Any(IsSdkPath) ||
+                movedAssets.Any(IsSdkPath) ||
+                movedFromAssetPaths.Any(IsSdkPath);
 
             if (inPackages)
             {

@@ -59,24 +59,79 @@ namespace mtion.room.sdk.customproperties
 
         public void LocateProperty(GameObject exportedAssetGO)
         {
-            var transform = exportedAssetGO.transform;
-
             var componentType = Type.GetType(_declaringTypeName);
-            if (componentType != null)
+            
+            if (componentType == null)
             {
-                _propertyComponent = transform.GetComponentInChildren(componentType);
-                if (_propertyComponent == null)
-                {
-                    _propertyComponent = transform.GetComponent(componentType);
-                }
-
-                if (_propertyComponent == null)
-                {
-                    return;
-                }
-
-                _propertyInfo = componentType.GetProperty(_propertyName);
+                componentType = FindTypeByName(_declaringTypeName);
             }
+            
+            if (componentType == null)
+            {
+                Debug.LogWarning($"[CustomProperty] Failed to resolve type: {_declaringTypeName}");
+                return;
+            }
+
+            Transform targetTransform = exportedAssetGO.transform;
+            if (_gameObjectSiblingIndexPath != null && _gameObjectSiblingIndexPath.Count > 0)
+            {
+                foreach (int index in _gameObjectSiblingIndexPath)
+                {
+                    if (index < 0 || index >= targetTransform.childCount)
+                    {
+                        Debug.LogWarning($"[CustomProperty] Invalid sibling path for {_propertyName}. " +
+                            $"Index {index} out of range (childCount={targetTransform.childCount}). " +
+                            "Falling back to GetComponentInChildren.");
+                        targetTransform = null;
+                        break;
+                    }
+                    targetTransform = targetTransform.GetChild(index);
+                }
+            }
+
+            if (targetTransform != null)
+            {
+                _propertyComponent = targetTransform.GetComponent(componentType);
+            }
+            
+            if (_propertyComponent == null)
+            {
+                _propertyComponent = exportedAssetGO.transform.GetComponentInChildren(componentType);
+                if (_propertyComponent == null)
+                {
+                    _propertyComponent = exportedAssetGO.transform.GetComponent(componentType);
+                }
+            }
+
+            if (_propertyComponent == null)
+            {
+                Debug.LogWarning($"[CustomProperty] Failed to find component {componentType.Name} " +
+                    $"for property {_propertyName}");
+                return;
+            }
+
+            _propertyInfo = componentType.GetProperty(_propertyName);
+            if (_propertyInfo == null)
+            {
+                Debug.LogWarning($"[CustomProperty] Property {_propertyName} not found on {componentType.Name}");
+            }
+        }
+        
+        private static Type FindTypeByName(string assemblyQualifiedName)
+        {
+            if (string.IsNullOrEmpty(assemblyQualifiedName))
+            {
+                return null;
+            }
+            
+            string typeName = assemblyQualifiedName.Split(',')[0].Trim();
+            
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                var type = assembly.GetType(typeName);
+                if (type != null) return type;
+            }
+            return null;
         }
 
         public T GetValue()

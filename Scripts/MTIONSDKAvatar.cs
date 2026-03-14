@@ -1,3 +1,4 @@
+using mtion.room.sdk;
 using mtion.room.sdk.action;
 using System;
 using UnityEngine;
@@ -16,17 +17,21 @@ namespace mtion.room.sdk.compiled
             for (int i = 0; i < ObjectReference.transform.childCount; ++i)
             {
                 Transform child = ObjectReference.transform.GetChild(i);
-                if (child != null && child.GetComponentInChildren<MActionBehaviourGroup>() == null)
+                if (child == null ||
+                    VisualScriptingSupportUtil.IsVisualScriptingHostObject(child.gameObject) ||
+                    child.GetComponentInChildren<MActionBehaviourGroup>() != null)
                 {
-                    if (child.GetComponentInChildren<AvatarAnimations>() == null)
-                    {
-                        child.gameObject.AddComponent<AvatarAnimations>();
-                    }
+                    continue;
+                }
 
-                    if (child.GetComponentInChildren<AvatarMovementSettings>() == null)
-                    {
-                        child.gameObject.AddComponent<AvatarMovementSettings>();
-                    }
+                if (child.GetComponentInChildren<AvatarAnimations>() == null)
+                {
+                    child.gameObject.AddComponent<AvatarAnimations>();
+                }
+
+                if (child.GetComponentInChildren<AvatarMovementSettings>() == null)
+                {
+                    child.gameObject.AddComponent<AvatarMovementSettings>();
                 }
             }
         }

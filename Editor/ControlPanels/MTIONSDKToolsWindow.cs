@@ -19,6 +19,7 @@ namespace mtion.room.sdk
         {
             BUILD,
             PROPS,
+            VISUAL_SCRIPTING,
             ACTIONS,
             OPTIMIZATION,
             RAGDOLL,
@@ -40,6 +41,7 @@ namespace mtion.room.sdk
 
         private static Tabs _selectedTab;
         private static bool _showPropPanel;
+        private static bool _showVisualScriptingPanel;
         private static bool _showActionPanel;
         private static bool _showRagdollPanel;
         private static bool _showAvatarMovementPanel;
@@ -67,6 +69,12 @@ namespace mtion.room.sdk
         private static GUIStyle _boxHeaderStyle;
         private static GUIStyle _successLabelStyle;
         private static GUIStyle _errorLabelStyle;
+        private static GUIStyle _boxStyle;
+        private static GUIStyle _warningBoxStyle;
+        private static GUIStyle _warningLabelStyle;
+        private static GUIStyle _warningIconStyle;
+        private static GUISkin _cachedSkin;
+        private static readonly Dictionary<Color32, Texture2D> TextureCache = new Dictionary<Color32, Texture2D>();
 
         private static readonly Color LineColor = new Color(0.4f, 0.4f, 0.4f);
         private static readonly Color ButtonColor = new Color(0.067f, 0.067f, 0.067f);
@@ -98,9 +106,11 @@ namespace mtion.room.sdk
             LoadAllIcons();
             GetLocalSDKVersion();
             UpdateTabsToDisplay();
+            RegisterEditorCallbacks();
             MTIONSDKToolsBuildTab.Refresh();
             MTIONSDKToolsAssetTab.Refresh();
             MTIONSDKToolsActionTab.Refresh();
+            MTIONSDKToolsVisualScriptingTab.Invalidate();
 
             SDKServerManager.Init();
             TryAuthenticate();
@@ -108,9 +118,14 @@ namespace mtion.room.sdk
             PerformSceneTasks();
         }
 
+        private void OnDisable()
+        {
+            UnregisterEditorCallbacks();
+        }
+
         private void OnGUI()
         {
-            InitializeStyles();
+            EnsureStylesInitialized();
             UpdateTabsToDisplay();
 
             DrawWindowHeader();
@@ -168,7 +183,7 @@ namespace mtion.room.sdk
                 else
                 {
                     DrawLargeMessage("Unable to authenticate with mtion servers.");
-                    DrawLargeMessage("Please login to the mtion worlds client and then try again.");
+                    DrawLargeMessage("Please login to the mxm studio client and then try again.");
                 }
 
                 return;
@@ -181,7 +196,6 @@ namespace mtion.room.sdk
         private void OnFocus()
         {
             TryAuthenticate();
-            PerformSceneTasks();
 
             switch (_selectedTab)
             {
@@ -190,6 +204,9 @@ namespace mtion.room.sdk
                     break;
                 case Tabs.PROPS:
                     MTIONSDKToolsAssetTab.Refresh();
+                    break;
+                case Tabs.VISUAL_SCRIPTING:
+                    MTIONSDKToolsVisualScriptingTab.Invalidate();
                     break;
                 case Tabs.ACTIONS:
                     MTIONSDKToolsActionTab.Refresh();
@@ -207,8 +224,18 @@ namespace mtion.room.sdk
             }
         }
 
-        private void InitializeStyles()
+
+        private static void EnsureStylesInitialized()
         {
+            if (_cachedSkin == GUI.skin &&
+                _headerStyle != null &&
+                _boxStyle != null &&
+                _warningBoxStyle != null)
+            {
+                return;
+            }
+
+            _cachedSkin = GUI.skin;
             _headerStyle = new GUIStyle();
             _headerStyle.normal.textColor = Color.white;
             _headerStyle.fontSize = 24;
@@ -275,6 +302,31 @@ namespace mtion.room.sdk
             _errorLabelStyle = new GUIStyle(EditorStyles.label);
             _errorLabelStyle.normal.textColor = Color.red;
             _errorLabelStyle.alignment = TextAnchor.MiddleLeft;
+
+            _boxStyle = new GUIStyle(GUI.skin.box);
+            _boxStyle.normal.background = CreateTextureForColor(1, 1, BoxBackgroundColor);
+
+            _warningBoxStyle = new GUIStyle
+            {
+                padding = new RectOffset(0, 0, 0, 0),
+                fixedHeight = 75
+            };
+
+            _warningLabelStyle = new GUIStyle(EditorStyles.label);
+            _warningLabelStyle.alignment = TextAnchor.MiddleLeft;
+            _warningLabelStyle.normal.textColor = Color.white;
+            _warningLabelStyle.padding = new RectOffset(3, 3, 3, 3);
+            _warningLabelStyle.margin = new RectOffset(0, 0, 0, 0);
+            _warningLabelStyle.richText = true;
+            _warningLabelStyle.wordWrap = true;
+
+            _warningIconStyle = new GUIStyle
+            {
+                fixedWidth = 48,
+                fixedHeight = 48,
+                padding = new RectOffset(0, 0, 0, 0),
+                margin = new RectOffset(0, 0, 0, 0)
+            };
         }
 
         private void TryAuthenticate()
@@ -300,6 +352,7 @@ namespace mtion.room.sdk
             }
 
             SDKServerManager.Init();
+
             _remoteSdkVersionTask = SDKServerManager.GetServerSdkVersion();
             _remoteSdkVersionTask.ContinueWith(t =>
             {
@@ -359,6 +412,9 @@ namespace mtion.room.sdk
         {
             if (string.IsNullOrWhiteSpace(localVersion) || string.IsNullOrWhiteSpace(remoteVersion))
                 return false;
+
+            if (remoteVersion == "offline")
+                return true;
 
             var localParts = localVersion.Split('.');
             var remoteParts = remoteVersion.Split('.');
@@ -442,7 +498,13 @@ namespace mtion.room.sdk
                 {
                     _selectedTab = Tabs.PROPS;
                     MTIONSDKToolsAssetTab.Initialize();
-                    MTIONSDKToolsAssetTab.Refresh();
+                }
+                else if (_showVisualScriptingPanel && GUILayout.Button("UVS", _selectedTab == Tabs.VISUAL_SCRIPTING
+                    ? _toolbarButtonSelectedStyle
+                    : _toolbarButtonStyle))
+                {
+                    _selectedTab = Tabs.VISUAL_SCRIPTING;
+                    MTIONSDKToolsVisualScriptingTab.Invalidate();
                 }
                 else if (_showActionPanel && GUILayout.Button("Actions", _selectedTab == Tabs.ACTIONS
                     ? _toolbarButtonSelectedStyle
@@ -493,6 +555,9 @@ namespace mtion.room.sdk
                 case Tabs.PROPS:
                     MTIONSDKToolsAssetTab.Draw();
                     break;
+                case Tabs.VISUAL_SCRIPTING:
+                    MTIONSDKToolsVisualScriptingTab.Draw();
+                    break;
                 case Tabs.ACTIONS:
                     MTIONSDKToolsActionTab.Draw();
                     break;
@@ -519,19 +584,34 @@ namespace mtion.room.sdk
             if (descriptorObject == null)
             {
                 _showPropPanel = false;
+                _showVisualScriptingPanel = false;
                 _showActionPanel = false;
                 _showRagdollPanel = false;
                 _showAvatarMovementPanel = false;
                 _showAvatarAnimationsPanel = false;
+
+                if (_selectedTab == Tabs.VISUAL_SCRIPTING)
+                {
+                    _selectedTab = Tabs.BUILD;
+                }
             }
             else
             {
                 _showPropPanel = descriptorObject.ObjectType == MTIONObjectType.MTIONSDK_BLUEPRINT;
+                _showVisualScriptingPanel = descriptorObject.ObjectType == MTIONObjectType.MTIONSDK_BLUEPRINT ||
+                    descriptorObject.ObjectType == MTIONObjectType.MTIONSDK_ROOM ||
+                    descriptorObject.ObjectType == MTIONObjectType.MTIONSDK_ASSET ||
+                    descriptorObject.ObjectType == MTIONObjectType.MTIONSDK_AVATAR;
                 _showActionPanel = descriptorObject.ObjectType == MTIONObjectType.MTIONSDK_ASSET ||
                     descriptorObject.ObjectType == MTIONObjectType.MTIONSDK_AVATAR;
                 _showRagdollPanel = descriptorObject.ObjectType == MTIONObjectType.MTIONSDK_AVATAR;
                 _showAvatarMovementPanel = descriptorObject.ObjectType == MTIONObjectType.MTIONSDK_AVATAR;
                 _showAvatarAnimationsPanel = descriptorObject.ObjectType == MTIONObjectType.MTIONSDK_AVATAR;
+
+                if (!_showVisualScriptingPanel && _selectedTab == Tabs.VISUAL_SCRIPTING)
+                {
+                    _selectedTab = Tabs.BUILD;
+                }
             }
         }
 
@@ -539,10 +619,9 @@ namespace mtion.room.sdk
 
         public static void StartBox()
         {
-            GUIStyle modifiedBox = GUI.skin.GetStyle("Box");
-            modifiedBox.normal.background = CreateTextureForColor(1, 1, BoxBackgroundColor);
+            EnsureStylesInitialized();
 
-            EditorGUILayout.BeginHorizontal(modifiedBox);
+            EditorGUILayout.BeginHorizontal(_boxStyle);
             GUILayout.Label(string.Empty, GUILayout.MaxWidth(5));
 
             EditorGUILayout.BeginVertical();
@@ -562,6 +641,24 @@ namespace mtion.room.sdk
 
         public static Texture2D CreateTextureForColor(int width, int height, Color col)
         {
+            if (width == 1 && height == 1)
+            {
+                Color32 cacheKey = col;
+                if (TextureCache.TryGetValue(cacheKey, out Texture2D cachedTexture) && cachedTexture != null)
+                {
+                    return cachedTexture;
+                }
+
+                Texture2D cachedResult = CreateTexture(width, height, col);
+                TextureCache[cacheKey] = cachedResult;
+                return cachedResult;
+            }
+
+            return CreateTexture(width, height, col);
+        }
+
+        private static Texture2D CreateTexture(int width, int height, Color col)
+        {
             Color[] pix = new Color[width * height];
             for (int i = 0; i < pix.Length; ++i)
             {
@@ -576,37 +673,21 @@ namespace mtion.room.sdk
 
         public static void DrawWarning(string text, WarningType warningType = WarningType.STANDARD)
         {
-            GUIStyle boxStyle = new GUIStyle();
-            boxStyle.padding = new RectOffset(0, 0, 0, 0);
-            boxStyle.fixedHeight = 75;
+            EnsureStylesInitialized();
 
-            GUIStyle labelStyle = new GUIStyle();
-            labelStyle.alignment = TextAnchor.MiddleLeft;
-            labelStyle.normal.textColor = Color.white;
-            labelStyle.padding = new RectOffset(3, 3, 3, 3);
-            labelStyle.margin = new RectOffset(0, 0, 0, 0);
-            labelStyle.richText = true;
-            labelStyle.wordWrap = true;
-
-            GUIStyle iconStyle = new GUIStyle();
-            iconStyle.fixedWidth = 48;
-            iconStyle.fixedHeight = 48;
-            iconStyle.padding = new RectOffset(0, 0, 0, 0);
-            iconStyle.margin = new RectOffset(0, 0, 0, 0);
-
-            GUILayout.BeginHorizontal(boxStyle);
+            GUILayout.BeginHorizontal(_warningBoxStyle);
             {
-                GUILayout.BeginVertical(GUILayout.Height(boxStyle.fixedHeight));
+                GUILayout.BeginVertical(GUILayout.Height(_warningBoxStyle.fixedHeight));
                 GUILayout.FlexibleSpace();
-                GUILayout.Label(warningType == WarningType.STANDARD ? _warningIcon : _errorIcon, iconStyle);
+                GUILayout.Label(warningType == WarningType.STANDARD ? _warningIcon : _errorIcon, _warningIconStyle);
                 GUILayout.FlexibleSpace();
                 GUILayout.EndVertical();
 
                 GUILayout.Space(16);
 
-                GUILayout.BeginVertical(GUILayout.Height(boxStyle.fixedHeight));
+                GUILayout.BeginVertical(GUILayout.Height(_warningBoxStyle.fixedHeight));
                 GUILayout.FlexibleSpace();
-                GUILayout.Label(text, labelStyle);
+                GUILayout.Label(text, _warningLabelStyle);
                 GUILayout.FlexibleSpace();
                 GUILayout.EndVertical();
             }
@@ -631,6 +712,60 @@ namespace mtion.room.sdk
             OpenEnvironmentSceneForBlueprint();
         }
 
+        private static void RegisterEditorCallbacks()
+        {
+            UnregisterEditorCallbacks();
+            EditorApplication.hierarchyChanged += OnEditorStateChanged;
+            EditorApplication.projectChanged += OnEditorStateChanged;
+            Undo.undoRedoPerformed += OnEditorStateChanged;
+            EditorSceneManager.sceneOpened += OnSceneOpened;
+            EditorSceneManager.sceneSaved += OnSceneSaved;
+            EditorSceneManager.newSceneCreated += OnNewSceneCreated;
+        }
+
+        private static void UnregisterEditorCallbacks()
+        {
+            EditorApplication.hierarchyChanged -= OnEditorStateChanged;
+            EditorApplication.projectChanged -= OnEditorStateChanged;
+            Undo.undoRedoPerformed -= OnEditorStateChanged;
+            EditorSceneManager.sceneOpened -= OnSceneOpened;
+            EditorSceneManager.sceneSaved -= OnSceneSaved;
+            EditorSceneManager.newSceneCreated -= OnNewSceneCreated;
+        }
+
+        private static void OnEditorStateChanged()
+        {
+            MTIONSDKToolsBuildTab.Invalidate();
+            InvalidateVisualScriptingTabIfVisible();
+        }
+
+        private static void OnSceneOpened(Scene scene, OpenSceneMode mode)
+        {
+            MTIONSDKToolsBuildTab.Invalidate();
+            InvalidateVisualScriptingTabIfVisible();
+            OpenEnvironmentSceneForBlueprint();
+        }
+
+        private static void OnSceneSaved(Scene scene)
+        {
+            MTIONSDKToolsBuildTab.Invalidate();
+            InvalidateVisualScriptingTabIfVisible();
+        }
+
+        private static void OnNewSceneCreated(Scene scene, NewSceneSetup setup, NewSceneMode mode)
+        {
+            MTIONSDKToolsBuildTab.Invalidate();
+            InvalidateVisualScriptingTabIfVisible();
+        }
+
+        private static void InvalidateVisualScriptingTabIfVisible()
+        {
+            if (_selectedTab == Tabs.VISUAL_SCRIPTING)
+            {
+                MTIONSDKToolsVisualScriptingTab.Invalidate();
+            }
+        }
+
         private static void OpenEnvironmentSceneForBlueprint()
         {
             var sceneBase = BuildManager.GetSceneDescriptor()?.GetComponentInChildren<MTIONSDKDescriptorSceneBase>();
@@ -640,13 +775,13 @@ namespace mtion.room.sdk
                 return;
             }
 
-            if (!string.IsNullOrEmpty(sdkBlueprint.EnvironmentSceneName))
+            if (sdkBlueprint.TryResolveEnvironmentScenePath(out string environmentScenePath, out _))
             {
                 Scene[] loadedScenes = SceneManager.GetAllScenes();
                 bool envIsLoaded = false;
                 foreach (Scene scene in loadedScenes)
                 {
-                    if (scene.name == sdkBlueprint.EnvironmentSceneName)
+                    if (scene.path == environmentScenePath)
                     {
                         envIsLoaded = true;
                         break;
@@ -655,31 +790,9 @@ namespace mtion.room.sdk
 
                 if (!envIsLoaded)
                 {
-                    string[] results = AssetDatabase.FindAssets(sdkBlueprint.EnvironmentSceneName);
-
-                    if (results.Length > 0)
-                    {
-
-                        string scenePath = "";
-                        for (int i = 0; i < results.Length; i++)
-                        {
-                            scenePath = AssetDatabase.GUIDToAssetPath(results[i]);
-
-                            if (scenePath.EndsWith(".unity"))
-                            {
-                                break;
-                            }
-                        }
-
-                        if (string.IsNullOrEmpty(scenePath))
-                        {
-                            return;
-                        }
-
-                        Scene prevScene = EditorSceneManager.GetActiveScene();
-                        EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
-                        EditorApplication.delayCall += () => { EditorSceneManager.SetActiveScene(prevScene); };
-                    }
+                    Scene prevScene = EditorSceneManager.GetActiveScene();
+                    EditorSceneManager.OpenScene(environmentScenePath, OpenSceneMode.Additive);
+                    EditorApplication.delayCall += () => { EditorSceneManager.SetActiveScene(prevScene); };
                 }
             }
         }

@@ -101,8 +101,21 @@ namespace mtion.room.sdk
             var sdkBlueprint = blueprintDescriptorObject.AddComponent<MTIONSDKBlueprint>();
 
             SDKEditorUtil.InitAddressableAssetFields(sdkBlueprint, MTIONObjectType.MTIONSDK_BLUEPRINT, roomSceneName);
-            sdkBlueprint.RoomSceneName = roomSceneName;
-            sdkBlueprint.EnvironmentSceneName = environmentSceneName;
+            sdkBlueprint.SetRoomSceneReference(roomScene);
+
+            if (!string.IsNullOrWhiteSpace(environmentSceneName))
+            {
+                Scene environmentScene = EditorSceneManager.GetSceneByName(environmentSceneName);
+                if (environmentScene.IsValid())
+                {
+                    sdkBlueprint.SetEnvironmentSceneReference(environmentScene);
+                }
+                else
+                {
+                    string environmentScenePath = $"{Path.GetDirectoryName(roomScenePath)}/{environmentSceneName}.unity".Replace('\\', '/');
+                    sdkBlueprint.SetEnvironmentSceneReference(environmentScenePath);
+                }
+            }
 
             sdkRoom = GameObject.FindFirstObjectByType<MTIONSDKRoom>();
             sdkBlueprint.SDKRoot = sdkRoom.SDKRoot;

@@ -1,11 +1,12 @@
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEditor;
-using UnityEditor.SceneManagement;
-using UnityEditor.AddressableAssets.Settings;
-using UnityEditor.AddressableAssets;
 using System;
+using System.Collections.Generic;
 using mtion.room.sdk.compiled;
+using UnityEditor;
+using UnityEditor.AddressableAssets;
+using UnityEditor.AddressableAssets.Settings;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.SceneManagement;
 
 
 
@@ -49,6 +50,16 @@ namespace mtion.room.sdk
             return BuildManager.Instance.SceneDescriptorObject;
         }
 
+        public static string GetSceneDescriptorValidationError()
+        {
+            return BuildManager.Instance.GetSceneDescriptorValidationErrorInternal();
+        }
+
+        public static SDKExportReport GetLastExportReport()
+        {
+            return BuildManager.Instance.lastExportReport;
+        }
+
 
 
         public static bool SERVER_HTTPS = true;
@@ -67,8 +78,8 @@ namespace mtion.room.sdk
         }
 
 
-        public bool SceneContainsValidSDK { get => GetMTIONSDKDescriptor() != null; }
-        public GameObject SceneDescriptorObject { get => GetMTIONSDKDescriptor(); }
+        public bool SceneContainsValidSDK { get => GetSceneDescriptorCandidatesInternal().Count > 0; }
+        public GameObject SceneDescriptorObject { get => GetPreferredSceneDescriptorInternal(); }
         public bool ExportTaskRunning { get => exportTaskRunning; set => exportTaskRunning = value; }
         public float ExportPercentComplete 
         { 
@@ -86,6 +97,8 @@ namespace mtion.room.sdk
 
         private SceneExporter sceneExporter;
         private bool exportTaskRunning = false;
+        private SDKExportReport lastExportReport;
+        private Scene exportStartingScene;
 
 
         private void BuildApplicationAssetBundle()
@@ -97,24 +110,50 @@ namespace mtion.room.sdk
 
         private void BuildAndExportSdkScene()
         {
-            var sdkDescriptor = GetMTIONSDKDescriptor();
+            string validationError = GetSceneDescriptorValidationErrorInternal();
+            if (!string.IsNullOrEmpty(validationError))
+            {
+                EditorUtility.DisplayDialog("Error", validationError, "ok");
+                return;
+            }
+
+            GameObject sdkDescriptor = GetPreferredSceneDescriptorInternal();
             if (sdkDescriptor == null)
             {
                 return;
             }
 
             var sceneObjectDescriptor = sdkDescriptor.GetComponent<MTIONSDKDescriptorSceneBase>();
-            var roomObject = sceneObjectDescriptor.ObjectReferenceProp;
+            if (sceneObjectDescriptor == null || sceneObjectDescriptor.ObjectReference == null)
+            {
+                EditorUtility.DisplayDialog("Error", "Scene descriptor is missing an object reference.", "ok");
+                return;
+            }
+
+            var roomObject = sceneObjectDescriptor.ObjectReference;
 
             if (roomObject.transform.position == Vector3.zero &&
                 roomObject.transform.rotation == Quaternion.identity &&
                 roomObject.transform.localScale == Vector3.one)
             {
+                exportStartingScene = EditorSceneManager.GetActiveScene();
                 exportTaskRunning = true;
                 sceneExporter = new SceneExporter(sceneObjectDescriptor);
-                sceneExporter.ExportSDKScene();
-                sceneExporter = null;
-                exportTaskRunning = false;
+                sceneExporter.ExportFinished += OnExportFinished;
+
+                try
+                {
+                    sceneExporter.ExportSDKScene();
+                }
+                catch (Exception ex)
+                {
+                    if (sceneExporter != null && !sceneExporter.IsCompleted)
+                    {
+                        sceneExporter.FailReport(ex);
+                        Debug.LogException(ex);
+                        EditorUtility.DisplayDialog("SDK Export Failed", ex.Message, "Close");
+                    }
+                }
             }
             else
             {
@@ -122,7 +161,128 @@ namespace mtion.room.sdk
             }
         }
 
-        private GameObject GetMTIONSDKDescriptor()
+        private void OnExportFinished(SceneExporter exporter, Exception ex)
+        {
+            lastExportReport = exporter != null ? exporter.ExportReport : null;
+
+            if (ex != null)
+            {
+                Debug.LogException(ex);
+                EditorUtility.DisplayDialog("SDK Export Failed", ex.Message, "Close");
+            }
+
+            if (exportStartingScene.IsValid() && exportStartingScene.isLoaded)
+            {
+                EditorSceneManager.SetActiveScene(exportStartingScene);
+            }
+
+            try
+            {
+                exporter?.PersistReport();
+            }
+            catch (Exception persistException)
+            {
+                Debug.LogException(persistException);
+            }
+            finally
+            {
+                EditorUtility.ClearProgressBar();
+
+                if (sceneExporter != null)
+                {
+                    sceneExporter.ExportFinished -= OnExportFinished;
+                }
+
+                sceneExporter = null;
+                exportTaskRunning = false;
+                MTIONSDKToolsBuildTab.Invalidate();
+            }
+        }
+
+        private string GetSceneDescriptorValidationErrorInternal()
+        {
+            List<GameObject> descriptors = GetSceneDescriptorCandidatesInternal();
+            if (descriptors.Count == 0)
+            {
+                return null;
+            }
+
+            List<MTIONSDKDescriptorSceneBase> descriptorComponents = new List<MTIONSDKDescriptorSceneBase>();
+            foreach (GameObject descriptorObject in descriptors)
+            {
+                descriptorComponents.Add(descriptorObject.GetComponent<MTIONSDKDescriptorSceneBase>());
+            }
+
+            int blueprintCount = descriptorComponents.FindAll(descriptor => descriptor.ObjectType == MTIONObjectType.MTIONSDK_BLUEPRINT).Count;
+            if (blueprintCount > 1)
+            {
+                return "Multiple blueprint descriptors were found in the active scene. Keep only one blueprint descriptor root.";
+            }
+
+            if (blueprintCount == 1)
+            {
+                List<string> invalidBlueprintSceneDescriptors = new List<string>();
+                foreach (MTIONSDKDescriptorSceneBase descriptor in descriptorComponents)
+                {
+                    if (descriptor.ObjectType == MTIONObjectType.MTIONSDK_BLUEPRINT ||
+                        descriptor.ObjectType == MTIONObjectType.MTIONSDK_ROOM)
+                    {
+                        continue;
+                    }
+
+                    invalidBlueprintSceneDescriptors.Add(descriptor.ObjectType.ToString());
+                }
+
+                if (invalidBlueprintSceneDescriptors.Count > 0)
+                {
+                    return $"Blueprint scenes may only contain a blueprint descriptor and its room descriptor. Found: {string.Join(", ", invalidBlueprintSceneDescriptors)}.";
+                }
+
+                return null;
+            }
+
+            if (descriptorComponents.Count > 1)
+            {
+                List<string> descriptorTypes = new List<string>();
+                foreach (MTIONSDKDescriptorSceneBase descriptor in descriptorComponents)
+                {
+                    descriptorTypes.Add(descriptor.ObjectType.ToString());
+                }
+
+                return $"Multiple SDK descriptors were found in the active scene. Keep only one descriptor root. Found: {string.Join(", ", descriptorTypes)}.";
+            }
+
+            return null;
+        }
+
+        private GameObject GetPreferredSceneDescriptorInternal()
+        {
+            List<GameObject> descriptors = GetSceneDescriptorCandidatesInternal();
+            GameObject fallback = null;
+
+            foreach (GameObject descriptorObject in descriptors)
+            {
+                MTIONSDKDescriptorSceneBase descriptor = descriptorObject.GetComponent<MTIONSDKDescriptorSceneBase>();
+                if (descriptor == null)
+                {
+                    continue;
+                }
+
+                if (descriptor.ObjectType == MTIONObjectType.MTIONSDK_BLUEPRINT)
+                {
+                    return descriptorObject;
+                }
+
+                if (fallback == null)
+                {
+                    fallback = descriptorObject;
+                }
+            }
+
+            return fallback;
+        }
+
+        private List<GameObject> GetSceneDescriptorCandidatesInternal()
         {
             var currentScene = EditorSceneManager.GetActiveScene();
             List<GameObject> rootObjects = new List<GameObject>();
@@ -139,15 +299,10 @@ namespace mtion.room.sdk
                     continue;
                 }
 
-                if (descriptor.ObjectType == MTIONObjectType.MTIONSDK_BLUEPRINT)
-                {
-                    return go;
-                }
-
                 descriptors.Add(go);
             }
 
-            return descriptors.Count == 0 ? null : descriptors[0];
+            return descriptors;
         }
     }
 }

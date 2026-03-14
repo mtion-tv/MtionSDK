@@ -11,6 +11,7 @@ namespace mtion.room.sdk
     {
         private static Vector2 _scrollPos;
         private static MTIONAvatarRagdoll _avatarRagdoll;
+        private static Editor _avatarRagdollEditor;
 
         public static void Draw()
         {
@@ -31,7 +32,15 @@ namespace mtion.room.sdk
                 if (descriptor != null)
                 {
                     _avatarRagdoll = descriptor.ObjectReference?.GetComponentInChildren<MTIONAvatarRagdoll>();
+                    if (_avatarRagdoll != null)
+                    {
+                        _avatarRagdollEditor = Editor.CreateEditor(_avatarRagdoll);
+                    }
                 }
+            }
+            else if (_avatarRagdollEditor == null || _avatarRagdollEditor.target != _avatarRagdoll)
+            {
+                _avatarRagdollEditor = Editor.CreateEditor(_avatarRagdoll);
             }
         }
 
@@ -50,12 +59,14 @@ namespace mtion.room.sdk
                     for (var i = 0; i < descriptor.ObjectReference.transform.childCount; i++)
                     {
                         var child = descriptor.ObjectReference.transform.GetChild(i);
-                        if (child.GetComponent<MActionBehaviourGroup>() != null)
+                        if (child.GetComponent<MActionBehaviourGroup>() != null ||
+                            VisualScriptingSupportUtil.IsVisualScriptingHostObject(child.gameObject))
                         {
                             continue;
                         }
 
                         _avatarRagdoll = child.gameObject.AddComponent<MTIONAvatarRagdoll>();
+                        _avatarRagdollEditor = Editor.CreateEditor(_avatarRagdoll);
                         break;
                     }    
                 }
@@ -73,8 +84,7 @@ namespace mtion.room.sdk
             GUILayout.Label("Configure Ragdoll", MTIONSDKToolsWindow.BoxHeaderStyle);
             EditorGUILayout.Space();
 
-            var editor = Editor.CreateEditor(_avatarRagdoll);
-            editor.OnInspectorGUI();
+            _avatarRagdollEditor?.OnInspectorGUI();
 
             MTIONSDKToolsWindow.EndBox();
         }

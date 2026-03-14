@@ -13,13 +13,11 @@ namespace mtion.room.sdk
             GUILayout.Space(10);
             if (GUILayout.Button(new GUIContent("Documentation", "Opens link to SDK documentation"), MTIONSDKToolsWindow.LargeButtonStyle))
             {
-                Application.OpenURL("https://docs.mtion.xyz/mtion/mtion-sdk");
             }
 
             GUILayout.Space(10);
-            if (GUILayout.Button(new GUIContent("Tutorials", "Opens link to mtion worlds tutorials"), MTIONSDKToolsWindow.LargeButtonStyle))
+            if (GUILayout.Button(new GUIContent("Tutorials", "Opens link to mxm studio tutorials"), MTIONSDKToolsWindow.LargeButtonStyle))
             {
-                Application.OpenURL("https://docs.mtion.xyz/mtion/tutorials/video-tutorials");
             }
 
             GUILayout.Space(10);

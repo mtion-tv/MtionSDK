@@ -21,6 +21,34 @@ namespace mtion.room.sdk
             public string version;
         }
 #endif
+
+        public static string GetSDKPackageVersion()
+        {
+            string version = "0.0.0";
+
+#if UNITY_EDITOR
+            var assembly = typeof(ConfigurationGenerator).Assembly;
+            var packageInfo = PackageInfo.FindForAssembly(assembly);
+            if (packageInfo != null)
+            {
+                version = packageInfo.version;
+            }
+            else
+            {
+                TextAsset packageInfoFile = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/LocalPackages/MTIONStudioSDK/package.json");
+                if (packageInfoFile != null)
+                {
+                    MyPackageManifest manifest = JsonConvert.DeserializeObject<MyPackageManifest>(packageInfoFile.text);
+                    if (manifest != null && !string.IsNullOrEmpty(manifest.version))
+                    {
+                        version = manifest.version;
+                    }
+                }
+            }
+#endif
+
+            return version;
+        }
         
 
 
@@ -35,22 +63,7 @@ namespace mtion.room.sdk
         {
             SceneConfigurationFile model = new SceneConfigurationFile();
 
-            string version = "0.0.0";
-
-#if UNITY_EDITOR
-            var assembly = typeof(ConfigurationGenerator).Assembly;
-            var packageInfo = PackageInfo.FindForAssembly(assembly);
-            if (packageInfo != null)
-            {
-                version = packageInfo.version;
-            }
-            else
-            {
-                TextAsset packageInfoFile = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/LocalPackages/MTIONStudioSDK/package.json");
-                MyPackageManifest manifest = JsonConvert.DeserializeObject<MyPackageManifest>(packageInfoFile.text);
-                version = manifest.version;
-            }
-#endif
+            string version = GetSDKPackageVersion();
             
             model.SceneType = descriptor.ObjectType;
             model.Name = descriptor.Name;
@@ -122,6 +135,16 @@ namespace mtion.room.sdk
                 model.NumAssets = 0;
             }
 
+#if UNITY_EDITOR
+            ApplyVisualScriptingMetadata(
+                model,
+                VisualScriptingSupportUtil.InspectSceneForExport(
+                    descriptor.gameObject.scene,
+                    descriptor.ObjectType == MTIONObjectType.MTIONSDK_ENVIRONMENT
+                        ? VisualScriptingExportTarget.EnvironmentScene
+                        : VisualScriptingExportTarget.RoomScene));
+#endif
+
             return JsonConvert.SerializeObject(model, Formatting.None,
                 new JsonSerializerSettings()
                 {
@@ -146,22 +169,7 @@ namespace mtion.room.sdk
 
         public static string ConvertSDKAssetToJsonString(MTIONSDKAssetBase descriptor)
         {
-            string version = "0.0.0";
-
-#if UNITY_EDITOR
-            var assembly = typeof(ConfigurationGenerator).Assembly;
-            var packageInfo = PackageInfo.FindForAssembly(assembly);
-            if (packageInfo != null)
-            {
-                version = packageInfo.version;
-            }
-            else
-            {
-                TextAsset packageInfoFile = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/LocalPackages/MTIONStudioSDK/package.json");
-                MyPackageManifest manifest = JsonConvert.DeserializeObject<MyPackageManifest>(packageInfoFile.text);
-                version = manifest.version;
-            }
-#endif
+            string version = GetSDKPackageVersion();
 
             AssetConfigurationFile model = new AssetConfigurationFile();
             
@@ -205,6 +213,14 @@ namespace mtion.room.sdk
             }
             model.ActionDataGroup = actionDataGroup;
 
+#if UNITY_EDITOR
+            ApplyVisualScriptingMetadata(
+                model,
+                VisualScriptingSupportUtil.InspectGameObjectForExport(
+                    updatedGO.ObjectReferenceProp,
+                    VisualScriptingExportTarget.PortablePrefab));
+#endif
+
             return JsonConvert.SerializeObject(model, Formatting.None,
                 new JsonSerializerSettings()
                 {
@@ -214,22 +230,7 @@ namespace mtion.room.sdk
 
         public static string ConvertSDKAvatarToJsonString(MTIONSDKAssetBase descriptor)
         {
-            string version = "0.0.0";
-
-#if UNITY_EDITOR
-            var assembly = typeof(ConfigurationGenerator).Assembly;
-            var packageInfo = PackageInfo.FindForAssembly(assembly);
-            if (packageInfo != null)
-            {
-                version = packageInfo.version;
-            }
-            else
-            {
-                TextAsset packageInfoFile = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/LocalPackages/MTIONStudioSDK/package.json");
-                MyPackageManifest manifest = JsonConvert.DeserializeObject<MyPackageManifest>(packageInfoFile.text);
-                version = manifest.version;
-            }
-#endif
+            string version = GetSDKPackageVersion();
 
             AvatarConfigurationFile model = new AvatarConfigurationFile();
 
@@ -248,6 +249,14 @@ namespace mtion.room.sdk
 
             var avatarRagdoll = updatedGO.ObjectReference.GetComponentInChildren<MTIONAvatarRagdoll>();
             model.HasRagdoll = avatarRagdoll != null && avatarRagdoll.HasRequiredBones();
+
+#if UNITY_EDITOR
+            ApplyVisualScriptingMetadata(
+                model,
+                VisualScriptingSupportUtil.InspectGameObjectForExport(
+                    updatedGO.ObjectReferenceProp,
+                    VisualScriptingExportTarget.PortablePrefab));
+#endif
 
             return JsonConvert.SerializeObject(model, Formatting.None,
                 new JsonSerializerSettings()
@@ -389,6 +398,19 @@ namespace mtion.room.sdk
             AvatarConfigurationFile avatarConfiguration =
                 JsonConvert.DeserializeObject<AvatarConfigurationFile>(jsonData);
             return avatarConfiguration;
+        }
+
+        private static void ApplyVisualScriptingMetadata(ConfigurationFileBase configFile, VisualScriptingInspectionReport report)
+        {
+            if (configFile == null)
+            {
+                return;
+            }
+
+            configFile.HasVisualScripting = report != null && report.HasVisualScripting;
+            configFile.VisualScriptingScopes = report != null
+                ? report.GetOrderedScopes()
+                : new List<string>();
         }
     }
 }

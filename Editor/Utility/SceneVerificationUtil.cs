@@ -132,16 +132,40 @@ namespace mtion.room.sdk
                 var roomSdk = sdkBlueprint.GetMTIONSDKRoom();
                 if (roomSdk != null && roomSdk.ObjectReference != null)
                 {
-                    return roomSdk.ObjectReference.transform.childCount;
+                    return CountBuildChildren(roomSdk.ObjectReference.transform);
                 }
             }
 
             if (descriptor != null && descriptor.ObjectReference != null)
             {
-                return descriptor.ObjectReference.transform.childCount;
+                return CountBuildChildren(descriptor.ObjectReference.transform);
             }
 
             return 0;
+        }
+
+        private static int CountBuildChildren(Transform root)
+        {
+            if (root == null)
+            {
+                return 0;
+            }
+
+            int buildChildCount = 0;
+            for (int i = 0; i < root.childCount; i++)
+            {
+                Transform child = root.GetChild(i);
+                if (child == null ||
+                    child.name == "ActionBehaviourContainer" ||
+                    VisualScriptingSupportUtil.IsVisualScriptingHostObject(child.gameObject))
+                {
+                    continue;
+                }
+
+                buildChildCount++;
+            }
+
+            return buildChildCount;
         }
     }
 }

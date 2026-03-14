@@ -71,8 +71,7 @@ namespace mtion.room.sdk.action
         
         public override object DefaultValue => Default;
     }
-
-
+    
     [Serializable]
     public class ActionEntryParameterInfo : ISerializationCallbackReceiver
     {
