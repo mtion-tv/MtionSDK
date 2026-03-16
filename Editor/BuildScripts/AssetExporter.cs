@@ -14,6 +14,7 @@ using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
+using UnityEditor.Compilation;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using System.Reflection;
@@ -48,11 +49,23 @@ namespace mtion.room.sdk
             public ScriptingImplementation StandaloneScriptingBackend;
         }
 
+        public sealed class ExportRequiresRecompileException : InvalidOperationException
+        {
+            public ExportRequiresRecompileException(string message)
+                : base(message)
+            {
+            }
+        }
+
         private static bool EditorCompiledWithJsonCatalog
         {
             get
             {
+#if ENABLE_JSON_CATALOG
                 return true;
+#else
+                return false;
+#endif
             }
         }
 
@@ -67,12 +80,20 @@ namespace mtion.room.sdk
             this.exportLocationOptions = exportLocationOptions;
         }
 
+        public static void EnsureProjectReadyForJsonCatalogExport()
+        {
+            AddressableAssetSettings settings = AddressableAssetSettingsDefaultObject.GetSettings(true);
+            EnsureJsonCatalogConfiguration(settings);
+        }
+
         public void ExportSDKAsset()
         {
             if (assetBase == null)
             {
                 throw new ArgumentNullException();
             }
+
+            EnsureProjectReadyForJsonCatalogExport();
 
             SDKServerManager.VerifyAssetGuid(assetBase);
 
@@ -406,6 +427,8 @@ namespace mtion.room.sdk
 
         public void ExportAsAddressableAssetBundle(Action onExportComplete)
         {
+            AddressableAssetSettings settings = AddressableAssetSettingsDefaultObject.GetSettings(true);
+
             var localUnityDirectory = SDKUtil.GetSDKLocalUnityBuildPath(assetBase, exportLocationOptions);
             if (Directory.Exists(localUnityDirectory))
             {
@@ -413,13 +436,10 @@ namespace mtion.room.sdk
             }
             Directory.CreateDirectory(localUnityDirectory);
 
-            AddressableAssetSettings settings = AddressableAssetSettingsDefaultObject.GetSettings(true);
             AddressablesBuildStateSnapshot buildState = CaptureAddressablesBuildState(settings);
 
             try
             {
-                EnsureJsonCatalogConfiguration(settings);
-
                 settings.BuildRemoteCatalog = true;
                 settings.DisableCatalogUpdateOnStartup = true;
                 settings.ContiguousBundles = true;
@@ -440,12 +460,11 @@ namespace mtion.room.sdk
 
                 foreach (Tuple<BuildTargetGroup, BuildTarget> target in targets)
                 {
-                    while (EditorApplication.isUpdating)
+                    if (EditorUserBuildSettings.activeBuildTarget != target.Item2)
                     {
-                        Thread.Sleep(10);
+                        throw new InvalidOperationException(
+                            $"The active build target must remain {target.Item2} during export. Wait for Unity to finish updating, then start the export again.");
                     }
-
-                    EditorUserBuildSettings.SwitchActiveBuildTarget(target.Item1, target.Item2);
 
                     AddressableAssetProfileSettings profile = settings.profileSettings;
                     string profileId = profile.GetProfileId(groupProfileName);
@@ -735,6 +754,7 @@ namespace mtion.room.sdk
                 .FirstOrDefault();
         }
 
+
         private static void EnsureJsonCatalogConfiguration(AddressableAssetSettings settings)
         {
             if (settings == null)
@@ -742,41 +762,118 @@ namespace mtion.room.sdk
                 throw new InvalidOperationException("Addressables settings are missing.");
             }
 
+            if (EditorApplication.isCompiling || EditorApplication.isUpdating)
+            {
+                throw new ExportRequiresRecompileException(
+                    "Unity is still compiling or updating scripts. Wait for Unity to finish, then start the export again.");
+            }
+
+            List<string> changes = new List<string>();
             bool changedSettings = false;
             if (!settings.EnableJsonCatalog)
             {
                 settings.EnableJsonCatalog = true;
                 changedSettings = true;
+                changes.Add("enabled Addressables 'Enable Json Catalog'");
             }
 
-            if (TryGetAddressablesBool(settings, "BundleLocalCatalog") != false)
+            bool? bundleLocalCatalog = TryGetAddressablesBool(settings, "BundleLocalCatalog");
+            if (bundleLocalCatalog.HasValue && bundleLocalCatalog.Value)
             {
-                TrySetAddressablesBool(settings, "BundleLocalCatalog", false);
-                changedSettings = true;
+                if (TrySetAddressablesBool(settings, "BundleLocalCatalog", false))
+                {
+                    changedSettings = true;
+                    changes.Add("disabled Addressables 'Bundle Local Catalog'");
+                }
             }
 
             if (changedSettings)
             {
+                EditorUtility.SetDirty(settings);
                 AssetDatabase.SaveAssets();
             }
 
-            string standaloneSymbols = PlayerSettings.GetScriptingDefineSymbolsForGroup(BuildTargetGroup.Standalone) ?? string.Empty;
+            string standaloneSymbols = GetStandaloneScriptingDefineSymbols() ?? string.Empty;
             if (!HasDefineSymbol(standaloneSymbols, EnableJsonCatalogDefine))
             {
                 string updatedSymbols = string.IsNullOrWhiteSpace(standaloneSymbols)
                     ? EnableJsonCatalogDefine
                     : $"{standaloneSymbols};{EnableJsonCatalogDefine}";
-                PlayerSettings.SetScriptingDefineSymbolsForGroup(BuildTargetGroup.Standalone, updatedSymbols);
-                AssetDatabase.SaveAssets();
-                throw new InvalidOperationException(
-                    $"Enabled the '{EnableJsonCatalogDefine}' scripting define for Standalone. Wait for Unity to finish recompiling scripts, then rerun export.");
+                SetStandaloneScriptingDefineSymbols(updatedSymbols);
+                changes.Add($"added Standalone scripting define '{EnableJsonCatalogDefine}'");
+            }
+
+            if (EnsureStandaloneWindows64Target())
+            {
+                changes.Add($"switched the active build target to {BuildTarget.StandaloneWindows64}");
+            }
+
+            if (changes.Count > 0)
+            {
+                RequestEditorScriptRecompile();
+                throw new ExportRequiresRecompileException(BuildRecompileRequiredMessage(changes));
             }
 
             if (!EditorCompiledWithJsonCatalog)
             {
-                throw new InvalidOperationException(
-                    $"The editor is currently compiled without '{EnableJsonCatalogDefine}'. Wait for Unity to finish recompiling scripts, then rerun export.");
+                RequestEditorScriptRecompile();
+                throw new ExportRequiresRecompileException(
+                    $"The SDK detected that Unity is still compiled without '{EnableJsonCatalogDefine}'. The SDK requested a script recompile. Wait for Unity to finish recompiling, then start the export again.");
             }
+        }
+
+        private static bool EnsureStandaloneWindows64Target()
+        {
+            if (EditorUserBuildSettings.activeBuildTarget == BuildTarget.StandaloneWindows64)
+            {
+                EditorUserBuildSettings.selectedStandaloneTarget = BuildTarget.StandaloneWindows64;
+                return false;
+            }
+
+            EditorUserBuildSettings.selectedStandaloneTarget = BuildTarget.StandaloneWindows64;
+            if (!EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Standalone, BuildTarget.StandaloneWindows64))
+            {
+                throw new InvalidOperationException("The SDK could not switch the active build target to StandaloneWindows64.");
+            }
+
+            return true;
+        }
+
+        private static string BuildRecompileRequiredMessage(IEnumerable<string> changes)
+        {
+            string changeSummary = string.Join(", ", changes);
+            return $"The SDK updated the project for JSON catalog exports ({changeSummary}) and requested a script recompile. Wait for Unity to finish recompiling, then start the export again.";
+        }
+
+        private static void RequestEditorScriptRecompile()
+        {
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            if (EditorApplication.isCompiling || EditorApplication.isUpdating)
+            {
+                return;
+            }
+
+            CompilationPipeline.RequestScriptCompilation(RequestScriptCompilationOptions.CleanBuildCache);
+        }
+
+        private static string GetStandaloneScriptingDefineSymbols()
+        {
+#if UNITY_2021_2_OR_NEWER
+            return PlayerSettings.GetScriptingDefineSymbols(UnityEditor.Build.NamedBuildTarget.Standalone);
+#else
+            return PlayerSettings.GetScriptingDefineSymbolsForGroup(BuildTargetGroup.Standalone);
+#endif
+        }
+
+        private static void SetStandaloneScriptingDefineSymbols(string defineSymbols)
+        {
+#if UNITY_2021_2_OR_NEWER
+            PlayerSettings.SetScriptingDefineSymbols(UnityEditor.Build.NamedBuildTarget.Standalone, defineSymbols);
+#else
+            PlayerSettings.SetScriptingDefineSymbolsForGroup(BuildTargetGroup.Standalone, defineSymbols);
+#endif
         }
 
         private static bool HasDefineSymbol(string defineSymbols, string symbol)

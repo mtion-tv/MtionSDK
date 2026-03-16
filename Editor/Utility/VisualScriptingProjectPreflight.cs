@@ -32,6 +32,16 @@ namespace mtion.room.sdk
     public static class VisualScriptingProjectPreflight
     {
         private const string GeneratedUnitOptionsAssetPath = "Assets/Unity.VisualScripting.Generated/VisualScripting.Flow/UnitOptions.db";
+        private const string VisualScriptingCoreRuntimeAssemblyName = "Unity.VisualScripting.Core";
+        private const string VisualScriptingCoreEditorAssemblyName = "Unity.VisualScripting.Core.Editor";
+        private const string VisualScriptingFlowEditorAssemblyName = "Unity.VisualScripting.Flow.Editor";
+        private const string UnityApiTypeName = "Unity.VisualScripting.UnityAPI, " + VisualScriptingCoreEditorAssemblyName;
+        private const string UnityThreadTypeName = "Unity.VisualScripting.UnityThread, " + VisualScriptingCoreRuntimeAssemblyName;
+        private const string PluginContainerTypeName = "Unity.VisualScripting.PluginContainer, " + VisualScriptingCoreEditorAssemblyName;
+        private const string BoltFlowTypeName = "Unity.VisualScripting.BoltFlow, " + VisualScriptingFlowEditorAssemblyName;
+        private const string UnitBaseTypeName = "Unity.VisualScripting.UnitBase, " + VisualScriptingFlowEditorAssemblyName;
+        private const string UnitBaseInitializationMethodName = "Unity.VisualScripting.UnitBase.IsUnitOptionsBuilt";
+        private const string ManualNodeLibraryRecoveryInstructions = "Open 'Project Settings > Visual Scripting', wait for the page to finish loading, then use 'Regenerate Nodes' or run Configure UVS again.";
         private static readonly Regex GeneratedTypePattern = new Regex(@"(?m)^([A-Za-z_][A-Za-z0-9_\.]+)@(literal|expose)$", RegexOptions.Compiled);
         private static long _cachedGeneratedUnitOptionsTicks = long.MinValue;
         private static bool _cachedGeneratedUnitOptionsExists;
@@ -129,7 +139,7 @@ namespace mtion.room.sdk
                 throw new InvalidOperationException(reason);
             }
 
-            RebuildNodeLibrary();
+            RebuildNodeLibraryWithAutoInitialization();
             InvalidateCache();
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
 
@@ -187,9 +197,86 @@ namespace mtion.room.sdk
             return false;
         }
 
+
+        private static void RebuildNodeLibraryWithAutoInitialization()
+        {
+            EnsureVisualScriptingEditorIsReady();
+
+            try
+            {
+                RebuildNodeLibrary();
+            }
+            catch (Exception ex) when (IsUnitOptionsInitializationFailure(ex))
+            {
+                Debug.LogWarning("[VisualScriptingProjectPreflight] Unity Visual Scripting node rebuild hit an uninitialized editor state. Retrying after bootstrapping editor services.");
+                EnsureVisualScriptingEditorIsReady();
+
+                try
+                {
+                    RebuildNodeLibrary();
+                }
+                catch (Exception retryEx) when (IsUnitOptionsInitializationFailure(retryEx))
+                {
+                    throw new InvalidOperationException(
+                        $"Unity Visual Scripting could not finish initializing its node library automatically. {ManualNodeLibraryRecoveryInstructions}",
+                        UnwrapVisualScriptingException(retryEx));
+                }
+            }
+        }
+
+        private static void EnsureVisualScriptingEditorIsReady()
+        {
+            if (IsVisualScriptingEditorReady())
+            {
+                return;
+            }
+
+            if (!IsUnityApiInitialized())
+            {
+                InvokeVisualScriptingEditorMethod(UnityApiTypeName, "Initialize");
+            }
+
+            if (!IsPluginContainerInitialized())
+            {
+                InvokeVisualScriptingEditorMethod(PluginContainerTypeName, "Initialize");
+            }
+
+            if (!IsVisualScriptingEditorReady())
+            {
+                throw new InvalidOperationException(
+                    $"Unity Visual Scripting editor services did not finish initializing. {ManualNodeLibraryRecoveryInstructions}");
+            }
+        }
+
+        private static bool IsVisualScriptingEditorReady()
+        {
+            if (!IsUnityApiInitialized() || !IsPluginContainerInitialized())
+            {
+                return false;
+            }
+
+            Type boltFlowType = FindType(BoltFlowTypeName);
+            PropertyInfo pathsProperty = boltFlowType?.GetProperty("Paths", BindingFlags.Public | BindingFlags.Static);
+            return pathsProperty?.GetValue(null) != null;
+        }
+
+        private static bool IsUnityApiInitialized()
+        {
+            Type unityThreadType = FindType(UnityThreadTypeName);
+            FieldInfo editorAsyncField = unityThreadType?.GetField("editorAsync", BindingFlags.Public | BindingFlags.Static);
+            return editorAsyncField?.GetValue(null) != null;
+        }
+
+        private static bool IsPluginContainerInitialized()
+        {
+            Type pluginContainerType = FindType(PluginContainerTypeName);
+            return TryGetStaticBoolPropertyValue(pluginContainerType, "initialized", out bool pluginContainerInitialized) &&
+                pluginContainerInitialized;
+        }
+
         private static void RebuildNodeLibrary()
         {
-            Type unitBaseType = FindType("Unity.VisualScripting.UnitBase, Unity.VisualScripting.Flow.Editor");
+            Type unitBaseType = FindType(UnitBaseTypeName);
             MethodInfo rebuildMethod = unitBaseType?.GetMethod("Rebuild", BindingFlags.Public | BindingFlags.Static);
             if (rebuildMethod == null)
             {
@@ -204,6 +291,79 @@ namespace mtion.room.sdk
             {
                 throw new InvalidOperationException(ex.InnerException?.Message ?? ex.Message, ex.InnerException ?? ex);
             }
+        }
+
+
+        private static void InvokeVisualScriptingEditorMethod(string typeName, string methodName)
+        {
+            Type type = FindType(typeName);
+            MethodInfo method = type?.GetMethod(methodName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static, null, Type.EmptyTypes, null);
+            if (method == null)
+            {
+                throw new InvalidOperationException(
+                    $"Unity Visual Scripting editor bootstrap API '{typeName}.{methodName}' is unavailable. {ManualNodeLibraryRecoveryInstructions}");
+            }
+
+            try
+            {
+                method.Invoke(null, Array.Empty<object>());
+            }
+            catch (TargetInvocationException ex)
+            {
+                Exception innerException = UnwrapVisualScriptingException(ex);
+                throw new InvalidOperationException(
+                    $"Failed to initialize Unity Visual Scripting editor services automatically: {innerException.Message} {ManualNodeLibraryRecoveryInstructions}",
+                    innerException);
+            }
+        }
+
+        private static bool TryGetStaticBoolPropertyValue(Type type, string propertyName, out bool value)
+        {
+            value = false;
+            PropertyInfo property = type?.GetProperty(propertyName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+            if (property == null || property.PropertyType != typeof(bool))
+            {
+                return false;
+            }
+
+            object propertyValue = property.GetValue(null);
+            if (!(propertyValue is bool boolValue))
+            {
+                return false;
+            }
+
+            value = boolValue;
+            return true;
+        }
+
+        private static bool IsUnitOptionsInitializationFailure(Exception exception)
+        {
+            for (Exception current = exception; current != null; current = current.InnerException)
+            {
+                if (!string.IsNullOrWhiteSpace(current.StackTrace) &&
+                    current.StackTrace.IndexOf(UnitBaseInitializationMethodName, StringComparison.Ordinal) >= 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static Exception UnwrapVisualScriptingException(Exception exception)
+        {
+            Exception current = exception;
+            while (current is TargetInvocationException targetInvocationException && targetInvocationException.InnerException != null)
+            {
+                current = targetInvocationException.InnerException;
+            }
+
+            while (current.InnerException != null && string.Equals(current.Message, current.InnerException.Message, StringComparison.Ordinal))
+            {
+                current = current.InnerException;
+            }
+
+            return current;
         }
 
         private static void CacheAuditResult(VisualScriptingGeneratedDataAuditResult result, bool fileExists, long fileTicks)

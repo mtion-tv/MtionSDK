@@ -25,7 +25,8 @@ namespace mtion.room.sdk.compiled
             foreach (var asset in assets)
             {
                 if (containsBlueprint &&
-                    (asset.ObjectType == MTIONObjectType.MTIONSDK_ROOM ||
+                    (asset.ObjectType == MTIONObjectType.MTIONSDK_BLUEPRINT||
+                    asset.ObjectType == MTIONObjectType.MTIONSDK_ROOM ||
                     asset.ObjectType == MTIONObjectType.MTIONSDK_ENVIRONMENT))
                 {
                     continue;

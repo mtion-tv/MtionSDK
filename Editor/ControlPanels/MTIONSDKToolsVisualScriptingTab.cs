@@ -324,7 +324,14 @@ namespace mtion.room.sdk
         private static void DrawStatusBox()
         {
             MTIONSDKToolsWindow.StartBox();
+            GUILayout.BeginHorizontal();
             GUILayout.Label("Unity Visual Scripting", MTIONSDKToolsWindow.BoxHeaderStyle);
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button("Refresh", MTIONSDKToolsWindow.SmallButtonStyle, GUILayout.Width(80)))
+            {
+                RefreshUvsState();
+            }
+            GUILayout.EndHorizontal();
             GUILayout.Space(6);
 
             GUILayout.Label(GetCurrentTargetLabel(), MTIONSDKToolsWindow.ListHeaderStyle);
@@ -338,6 +345,27 @@ namespace mtion.room.sdk
             }
 
             MTIONSDKToolsWindow.EndBox();
+        }
+
+        private static void RefreshUvsState()
+        {
+            try
+            {
+                Refresh();
+
+                if (_targetRoot != null &&
+                    !VisualScriptingReflectionUtility.SyncEntryPointRegistryFromVisualScripting(_targetRoot, out _, out List<string> syncErrors))
+                {
+                    throw new InvalidOperationException(string.Join("\n", syncErrors));
+                }
+
+                Refresh();
+            }
+            catch (Exception ex)
+            {
+                Refresh();
+                EditorUtility.DisplayDialog("UVS Refresh Failed", ex.Message, "Close");
+            }
         }
 
         private static void DrawIssuesBox()

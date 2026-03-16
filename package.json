@@ -1,7 +1,7 @@
 {
     "name": "com.mtion.sdk",
     "description": "Tools to create assets and scenes for app.",
-    "version": "0.20.1",
+    "version": "0.20.2",
     "supportedVersion": "6000.3.9f1",
     "unity": "2021.3",
     "displayName": "Mtion SDK",

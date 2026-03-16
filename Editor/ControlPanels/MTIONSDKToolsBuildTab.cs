@@ -741,7 +741,6 @@ namespace mtion.room.sdk
             _buildErrorsExist |= GenerateDescriptorValidationError();
             _buildErrorsExist |= GenerateBlueprintSceneReferenceErrors();
             _buildErrorsExist |= GenerateExportLocationError();
-            _buildErrorsExist |= GenerateMissingRequiredLayersError();
             _buildErrorsExist |= GenerateMissingThumbnailCameraError();
             _buildErrorsExist |= GenerateMissingColliderOnRigidbodyError();
             _buildErrorsExist |= RemoveEventSystemsError();
@@ -812,35 +811,7 @@ namespace mtion.room.sdk
             return true;
         }
 
-        private static bool GenerateMissingRequiredLayersError()
-        {
-            MVirtualDisplayTracker[] displayTrackers = GameObject.FindObjectsOfType<MVirtualDisplayTracker>();
-            if (displayTrackers.Length == 0)
-            {
-                return false;
-            }
-
-            List<string> missingLayers = new List<string>();
-            if (LayerMask.NameToLayer("VirtualDisplayLayer") < 0)
-            {
-                missingLayers.Add("VirtualDisplayLayer");
-            }
-
-            bool requiresMainVirtualCameraIgnore = displayTrackers
-                .Any(tracker => tracker.DisplayParams.DisplayType == DisplayComponentType.VTUBER_EXTERNAL_CAMERA_FEED);
-            if (requiresMainVirtualCameraIgnore && LayerMask.NameToLayer("MainVirtualCameraIgnore") < 0)
-            {
-                missingLayers.Add("MainVirtualCameraIgnore");
-            }
-
-            if (missingLayers.Count == 0)
-            {
-                return false;
-            }
-
-            AddValidationMessage($"Missing required layers: <b>{string.Join(", ", missingLayers)}</b>.", MTIONSDKToolsWindow.WarningType.ERROR);
-            return true;
-        }
+        
 
         private static bool GenerateMissingThumbnailCameraError()
         {

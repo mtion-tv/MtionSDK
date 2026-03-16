@@ -295,6 +295,37 @@ public static class MTIONSDKToolsActionTab
         }
     }
 
+    private static void RefreshSdkEntryPointsFromUvs()
+    {
+        try
+        {
+            GameObject descriptor = BuildManager.GetSceneDescriptor();
+            if (descriptor == null)
+            {
+                throw new System.InvalidOperationException("Initialize the scene under the Build tab before refreshing SDK entry points.");
+            }
+
+            MTIONSDKDescriptorSceneBase descriptorComponent = descriptor.GetComponent<MTIONSDKDescriptorSceneBase>();
+            if (descriptorComponent == null || descriptorComponent.ObjectReferenceProp == null)
+            {
+                throw new System.InvalidOperationException("The current SDK descriptor is missing its target object reference.");
+            }
+
+            GameObject sdkRoot = descriptorComponent.ObjectReferenceProp;
+            if (!VisualScriptingReflectionUtility.SyncEntryPointRegistryFromVisualScripting(sdkRoot, out _, out List<string> errors))
+            {
+                throw new System.InvalidOperationException(string.Join("\n", errors));
+            }
+
+            Refresh();
+        }
+        catch (System.Exception ex)
+        {
+            Refresh();
+            EditorUtility.DisplayDialog("SDK Entry Point Refresh Failed", ex.Message, "Close");
+        }
+    }
+
     public static void GenerateActionList()
     {
 #if MTION_ADVANCED_ACTION_UI
@@ -881,13 +912,13 @@ public static class MTIONSDKToolsActionTab
         UVSSDKEntryPointRegistry registry = sdkRoot.GetComponentInChildren<UVSSDKEntryPointRegistry>(true);
         if (registry == null)
         {
-            _sdkEntryPointMessage = "No SDK entry points are currently synced. Add SDK Entry Point nodes in the graph, then run Configure UVS in the UVS tab.";
+            _sdkEntryPointMessage = "No SDK entry points are currently synced. Add SDK Entry Point nodes in the graph, then click Refresh in the UVS or Actions tab.";
             return;
         }
 
         if (registry.HasDuplicateDisplayNames(out List<string> duplicateDisplayNames))
         {
-            _sdkEntryPointMessage = $"Duplicate SDK entry point display names detected: {string.Join(", ", duplicateDisplayNames)}. Run Configure UVS after fixing the graph entries.";
+            _sdkEntryPointMessage = $"Duplicate SDK entry point display names detected: {string.Join(", ", duplicateDisplayNames)}. Fix the graph entries, then click Refresh.";
             _sdkEntryPointMessageIsWarning = true;
         }
 
@@ -914,7 +945,7 @@ public static class MTIONSDKToolsActionTab
 
         if (_sdkEntryPointRows.Count == 0 && string.IsNullOrWhiteSpace(_sdkEntryPointMessage))
         {
-            _sdkEntryPointMessage = "No SDK entry points are currently synced. Add SDK Entry Point nodes in the graph, then run Configure UVS in the UVS tab.";
+            _sdkEntryPointMessage = "No SDK entry points are currently synced. Add SDK Entry Point nodes in the graph, then click Refresh in the UVS or Actions tab.";
         }
     }
 
@@ -937,7 +968,14 @@ public static class MTIONSDKToolsActionTab
     {
         StartBox();
         {
+            EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("SDK Entry Points", MTIONSDKToolsWindow.BoxHeaderStyle);
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button("Refresh", MTIONSDKToolsWindow.SmallButtonStyle, GUILayout.Width(80)))
+            {
+                RefreshSdkEntryPointsFromUvs();
+            }
+            EditorGUILayout.EndHorizontal();
 
             if (!string.IsNullOrWhiteSpace(_sdkEntryPointMessage))
             {

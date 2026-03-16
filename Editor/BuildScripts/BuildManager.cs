@@ -103,6 +103,8 @@ namespace mtion.room.sdk
 
         private void BuildApplicationAssetBundle()
         {
+            AssetExporter.EnsureProjectReadyForJsonCatalogExport();
+
             var builder = AddressableAssetSettingsDefaultObject.Settings.ActivePlayerDataBuilder;
             AddressableAssetSettings.CleanPlayerContent(builder);
             AddressableAssetSettings.BuildPlayerContent();
@@ -136,6 +138,16 @@ namespace mtion.room.sdk
                 roomObject.transform.rotation == Quaternion.identity &&
                 roomObject.transform.localScale == Vector3.one)
             {
+                try
+                {
+                    AssetExporter.EnsureProjectReadyForJsonCatalogExport();
+                }
+                catch (AssetExporter.ExportRequiresRecompileException ex)
+                {
+                    EditorUtility.DisplayDialog("SDK Export Recompile Required", ex.Message, "Close");
+                    return;
+                }
+
                 exportStartingScene = EditorSceneManager.GetActiveScene();
                 exportTaskRunning = true;
                 sceneExporter = new SceneExporter(sceneObjectDescriptor);
@@ -150,8 +162,16 @@ namespace mtion.room.sdk
                     if (sceneExporter != null && !sceneExporter.IsCompleted)
                     {
                         sceneExporter.FailReport(ex);
-                        Debug.LogException(ex);
-                        EditorUtility.DisplayDialog("SDK Export Failed", ex.Message, "Close");
+
+                        if (ex is AssetExporter.ExportRequiresRecompileException)
+                        {
+                            EditorUtility.DisplayDialog("SDK Export Recompile Required", ex.Message, "Close");
+                        }
+                        else
+                        {
+                            Debug.LogException(ex);
+                            EditorUtility.DisplayDialog("SDK Export Failed", ex.Message, "Close");
+                        }
                     }
                 }
             }
@@ -167,8 +187,15 @@ namespace mtion.room.sdk
 
             if (ex != null)
             {
-                Debug.LogException(ex);
-                EditorUtility.DisplayDialog("SDK Export Failed", ex.Message, "Close");
+                if (ex is AssetExporter.ExportRequiresRecompileException)
+                {
+                    EditorUtility.DisplayDialog("SDK Export Recompile Required", ex.Message, "Close");
+                }
+                else
+                {
+                    Debug.LogException(ex);
+                    EditorUtility.DisplayDialog("SDK Export Failed", ex.Message, "Close");
+                }
             }
 
             if (exportStartingScene.IsValid() && exportStartingScene.isLoaded)

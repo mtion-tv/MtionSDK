@@ -625,6 +625,12 @@ namespace mtion.room.sdk
                 DeleteAssetExport(sceneBase, sceneBase.LocationOption);
                 RestoreAssetExportBackup(sceneBase, sceneBase.LocationOption);
                 DeleteAssetExportBackup(sceneBase, sceneBase.LocationOption);
+
+                if (ex is AssetExporter.ExportRequiresRecompileException)
+                {
+                    throw;
+                }
+
                 throw new Exception($"Error while exporting ROOM {internalId}, restored backup: {ex}");
             }
             finally
@@ -680,6 +686,12 @@ namespace mtion.room.sdk
                 DeleteAssetExport(sceneBase, sceneBase.LocationOption);
                 RestoreAssetExportBackup(sceneBase, sceneBase.LocationOption);
                 DeleteAssetExportBackup(sceneBase, sceneBase.LocationOption);
+
+                if (ex is AssetExporter.ExportRequiresRecompileException)
+                {
+                    throw;
+                }
+
                 throw new Exception($"Error while exporting ENVIRONMENT {internalId}, restored backup: {ex}");
             }
             finally
@@ -747,6 +759,12 @@ namespace mtion.room.sdk
                 DeleteAssetExport(backupTarget, LocationOptions);
                 RestoreAssetExportBackup(backupTarget, LocationOptions);
                 DeleteAssetExportBackup(backupTarget, LocationOptions);
+
+                if (ex is AssetExporter.ExportRequiresRecompileException)
+                {
+                    throw;
+                }
+
                 throw new Exception($"Error while exporting ASSET {internalId}, restored backup: {ex}");
             }
             finally
