@@ -6,7 +6,7 @@ _Build, create, and publish customized clubhouses, assets and experiences._
 
 ## Installation
 
-:rotating_light: Unity Version **2021.3.25f1** Required. [Download Here](https://unity.com/releases/editor/archive) :rotating_light:
+:rotating_light: Unity Version **6000.3.9f1** suggested. Min version tested on is **2021.3.25f1**. [Download Here](https://unity.com/releases/editor/archive) :rotating_light:
 
 
 1. First, make sure Git is installed (https://git-scm.com/)
@@ -32,11 +32,15 @@ Click on Releases (right side bar) and download the `.tgz` package. Then:
 3. Click "Add package from tarball"
 4. Locate and choose the `.tgz` package you downloaded
 
+OR
+
+Use the OpenUPM version. Follow instructions here: https://openupm.com/packages/com.mtion.sdk/
+
 ## Refreshing Package
 
 Open the package `manifest.json`, then delete package. Save file. Let unity refresh. Then readd package again.
 New files will be loaded.
 
-## Documentation
+## Documentation (Outdated)
 
 https://docs.mtion.xyz/mtion/mtion-sdk/mtion-sdk-documentation
